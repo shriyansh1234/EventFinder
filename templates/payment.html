@@ -1,0 +1,39 @@
+<!-- payment.html -->
+{% extends 'base.html' %}
+
+{% block title %}Payment - Event Finder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Payment for Event</h1>
+    <!--If user enter wrong information or missing information-->
+    <form method="POST">
+        {% if error %}
+            <div class="alert alert-danger">{{error }}</div>  
+        {% endif %}
+
+    <p><strong>Number of Seats:</strong> {{ request.args.get('num_seats') }}</p>
+    <p><strong>Total Cost:</strong> ${{ request.args.get('total_cost') }}</p>
+
+    <form action="{{ url_for('process_payment') }}" method="POST">
+        <div class="form-group">
+            <label for="card_number">Card Number:</label>
+            <input type="text" class="form-control" id="card_number" name="card_number" placeholder="Enter card number" required>
+        </div>
+        <div class="form-group">
+            <label for="expiry_date">Expiry Date:</label>
+            <input type="text" class="form-control" id="expiry_date" name="expiry_date" placeholder="MM/YY" required>
+        </div>
+        <div class="form-group">
+            <label for="cvv">CVV:</label>
+            <input type="text" class="form-control" id="cvv" name="cvv" placeholder="Enter CVV" required>
+        </div>
+        
+        <!-- Hidden fields to carry event information -->
+        <input type="hidden" name="num_seats" value="{{ request.args.get('num_seats') }}">
+        <input type="hidden" name="total_cost" value="{{ request.args.get('total_cost') }}">
+
+        <button type="submit" class="btn btn-primary">Submit Payment</button>
+    </form>
+</div>
+{% endblock %}
