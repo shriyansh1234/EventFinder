@@ -13,6 +13,11 @@ user={}
 def index():
     return render_template('index.html')
 
+@app.route('/my_event',methods=['GET','POST'])
+def my_event():
+    return render_template('signin.html')
+
+#Add more features to sign up
 @app.route('/signup', methods=['GET','POST'])
 def signup():
     if request.method=='POST':
@@ -20,7 +25,7 @@ def signup():
         username = request.form.get('username')
         password = request.form.get('password')
         if not email or not username or not password:
-            error_message = " All information fields are required."
+            error_message = "All information fields are required."
             return render_template('signup.html',error=error_message)
         
         for userEnterSignup in user.values():
@@ -41,17 +46,21 @@ def signup():
         return redirect(url_for('main_app'))
     return render_template('signup.html')
 
+#Add more feature to sign in
 @app.route('/signin', methods=['GET', 'POST'])
 def signin():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
+        if not username or not password:
+            error_message = "Username and password are required."
+            return render_template('signin.html', error=error_message)
 
         if username in user:
             if user[username]['password']==password:
-                 return redirect(url_for('main_app'))
+                    return redirect(url_for('main_app'))
             else:
-                error_message = "Password does not exist. Please re-enter"
+                error_message = "Password is invalid"
         else:
             error_message ="Username does not exist. Please sign up"
         print(f"Error message: {error_message}")  # Before returning the template
@@ -59,6 +68,7 @@ def signin():
     return render_template('signin.html')
 
 from flask import session, render_template
+
 
 @app.route('/app')
 def main_app():
@@ -72,22 +82,33 @@ def organizer():
     return render_template('/organizer/organizer.html')  # Create this template for the Organizer page
 
 
-
 @app.route('/add-event', methods=['GET', 'POST'])
 def add_event():
     if request.method == 'POST':
+        # Extract form data
+        name = request.form['name']
+        location = request.form['location']
+        address = request.form['address']
+        paid = request.form.get('paid') == 'on'
+        cost = float(request.form['cost']) if paid else 0
+        category = request.form['category']
+        venue = request.form['venue']
+        time = request.form['time']
+        capacity = int(request.form['capacity'])
+
         new_event = {
-            "name": request.form['name'],
-            "location": request.form['location'],
-            "address": request.form['address'],
-            "paid": request.form.get('paid') == 'on',
-            "cost": float(request.form['cost']) if request.form.get('paid') == 'on' else 0,
-            "category": request.form['category'],
-            "venue": request.form['venue'],
-            "time": request.form['time'],
-            "capacity": int(request.form['capacity']),
+            "name": name,
+            "location": location,
+            "address": address,
+            "paid": paid,
+            "cost": cost,
+            "category": category,
+            "venue": venue,
+            "time": time,
+            "capacity": capacity,
             "image": ""  # Placeholder for the image file name
         }
+
 
         # Handle image upload
         if 'image' in request.files:
@@ -96,6 +117,11 @@ def add_event():
                 image_filename = image.filename
                 image.save(os.path.join(app.config['UPLOAD_FOLDER'], image_filename))
                 new_event['image'] = image_filename
+
+        if not name or not location or not address or not category or not venue or not time or not capacity:
+            flash("All fields except image are required. Please fill in the missing fields.", "error")
+            error_message ="All fields except image are required. Please fill in the missing fields."
+            return render_template('/organizer/add_event.html',error=error_message)
         
         events.append(new_event)  # Append new event to the events list
         save_events(events)  # Save updated events list to the JSON file
@@ -136,6 +162,36 @@ def filter_events():
         filtered_events = [event for event in filtered_events if event['cost'] <= max_cost]
 
     return render_template('/user/mainapp.html', events=filtered_events)  # Render the filtered events
+@app.route('/payment', methods=['GET'])
+def payment():
+    # Render the payment page with the number of seats and total cost passed from the event page
+    return render_template('payment.html', num_seats=request.args.get('num_seats'), total_cost=request.args.get('total_cost'))
+
+
+@app.route('/process-payment', methods=['POST'])
+def process_payment():
+    # Collect the payment details from the form
+    card_number = request.form['card_number']
+    expiry_date = request.form['expiry_date']
+    cvv = request.form['cvv']
+    num_seats = request.form['num_seats']
+    total_cost = request.form['total_cost']
+
+    if not card_number or not expiry_date or cvv:
+        error_message = "Please enter all the require field"
+        return render_template('payment.html', error=error_message)
+    
+
+    #-------------------------------------something to check payment------------------------------------------ 
+
+
+    # Mock payment processing
+    print(f"Processing payment for {num_seats} seats, total cost: ${total_cost}")
+    print(f"Card Number: {card_number}, Expiry Date: {expiry_date}, CVV: {cvv}")
+
+    # Redirect to a success page after processing (create a template for payment success if needed)
+    return redirect(url_for('main_app'))
+
 
 
 
