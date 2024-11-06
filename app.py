@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, request, jsonify
+from flask import Flask, render_template, redirect, url_for, request, jsonify, session
 import os
 import mysql.connector
 app = Flask(__name__)
@@ -75,6 +75,8 @@ def execute_db(query, params=()):
         cursor.close()
         conn.close()
 
+app.secret_key = 'testing'
+
 # POST endpoint to add a record
 @app.route('/add_record', methods=['POST'])
 def add_record():
@@ -123,8 +125,12 @@ def signup():
         if user_exists(email):
             error_messege ="User is already exist!"
             return render_template("signup.html", error=error_messege)
-        if add_user(email,password):
-            return redirect(url_for('signin'))
+        
+        user_id = add_user(email, password)
+
+        if(user_id):
+            session['user_id'] = user_id
+            return redirect(url_for('setname'))
         else:
             error_messege ="Sign up fail"
             return render_template("signup.html", error=error_messege)
@@ -154,9 +160,10 @@ def add_user(email, password):
         cursor.execute(sql_insert_query, (email, password))
         
         connection.commit()
-        
-        print(f"User {email} added successfully!")
-        return True
+        query = "SELECT user_id FROM Accounts WHERE email = ?"
+        user_id = query_db(query, (email,), one=True)
+        print(f"User {email} added successfully with user id:{user_id}!")
+        return user_id['user_id']
         
     except pyodbc.Error as error:
         print(f"Database error: {error}")
@@ -182,7 +189,10 @@ def signin():
         password = data.get('password')
         if not email or not password:
             return jsonify({"error": "All fields are required"}),400
-        if(user_and_password(email,password)):
+        print(user_and_password(email,password))
+        userinfo = user_and_password(email,password)
+        if(userinfo[user_exists]):
+            session['user_id'] = userinfo['user']['user_id'] #keeps track of user logged in
             return redirect(url_for('main_app'))
         else:
             return render_template('signin.html', error="Invalid email or password")
@@ -192,7 +202,8 @@ def signin():
 def user_and_password(email,password):
     query = "SELECT * FROM Accounts WHERE email =? AND user_pw =?"
     user = query_db(query,(email,password),one=True)
-    return user is not None
+    print(user)
+    return {user_exists: user is not None, 'user': user}
 
 
 
@@ -276,7 +287,84 @@ def filter_events():
 @app.route('/logout')
 def logout():
     # Handle logout logic here (for now, we'll just redirect to the index page)
+    session.clear()
     return redirect(url_for('index'))
+
+
+@app.route('/setname')
+def setname():
+    return render_template('setname.html')
+
+@app.route('/submitName', methods=['POST'])
+def submitname():
+    Fname = request.form.get('firstname')
+    Lname = request.form.get('lastname')
+    userid = session.get('user_id')
+    if userid is not None:
+            connection = connect_to_aws_rds()  # Assumes connect_to_aws_rds() sets up your database connection
+            if connection is None:
+                print("Connection to the database failed.")
+                return jsonify({"error": "Database connection failed"}), 500
+            
+            try:
+                cursor = connection.cursor()
+                query = "UPDATE Accounts SET first_name = ?, last_name = ? WHERE user_id = ?"
+                cursor.execute(query, (Fname, Lname, userid))
+                connection.commit()  # Commit the transaction
+                session['first_name'] = Fname
+                print(f"User ID {userid} name updated successfully to {Fname} {Lname}")
+                return redirect(url_for('interests'))
+                
+            except pyodbc.Error as error:
+                print(f"Database error: {error}")
+                return jsonify({"error": "Database update failed"}), 500
+            
+            finally:
+                cursor.close()
+                connection.close()
+        
+    else:
+        return jsonify({"error": "Not logged in"}), 400
+    
+
+@app.route('/interests')
+def interests():
+    query = "SELECT * FROM Categories"
+    categories = query_db(query)
+    print(categories)
+    return render_template('interests.html', categories=categories)
+
+@app.route('/submitInterests', methods=['POST'])
+def submitInterests():
+    interests = request.form.getlist('interests')
+    userid = session.get('user_id')
+    if userid is not None:
+            connection = connect_to_aws_rds()  # Assumes connect_to_aws_rds() sets up your database connection
+            if connection is None:
+                print("Connection to the database failed.")
+                return jsonify({"error": "Database connection failed"}), 500
+            
+            try:
+                cursor = connection.cursor()
+                for interest in interests:
+                    query = "INSERT INTO Interests (user_id, category_id) VALUES (?, ?)"
+                    cursor.execute(query, (userid, interest))
+                connection.commit()  # Commit the transaction
+                
+                print(f"User ID {userid} successfully submitted some interests~")
+                return redirect(url_for('main_app')) 
+                
+            except pyodbc.Error as error:
+                print(f"Database error: {error}")
+                return jsonify({"error": "Database update failed"}), 500
+            
+            finally:
+                cursor.close()
+                connection.close()
+        
+    else:
+        return jsonify({"error": "Not logged in"}), 400
+    #return jsonify(interests)
 
 if __name__ == '__main__':
     app.run(debug=True)

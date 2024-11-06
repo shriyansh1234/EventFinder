@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Interests - Event Finder{% endblock %}
+
+{% block content %}
+
+<script>
+
+</script>
+
+<h2 style="text-align: center;">Hey there, {{ session['first_name'] }}! Welcome to The Horizon! Before you jump into things, want to add a few interests to your profile? Just click on what you like!
+</h2>
+
+
+
+<div>
+    <form method="POST" action="/submitInterests">
+    {%for category in categories%}
+        <input type="checkbox" id={{category.category_id}}, name="interests" value="{{ category.category_id }}">
+        <label>{{category.category_name}}</label><br>
+    {%endfor%}
+    <button type="submit">Submit</button>
+</form>
+</div>
+
+{% endblock %}
