@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Event - Event Finder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Add New Event</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="name" class="form-label">Event Name:</label>
+            <input type="text" id="name" placeholder="Enter Event Name" name="name" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="description" class="form-label">Description:</label>
+            <textarea id="description" placeholder="Enter Description" name="description" class="form-control" rows="3" required></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="category_id" class="form-label">Category:</label>
+            <select id="category_id" name="category_id" class="form-control" required>
+                <option value="" disabled selected>Select Category</option> <!-- Default unselectable option -->
+                <option value="11">Art</option>
+                <option value="7">Cars</option>
+                <option value="4">Food</option>
+                <option value="2">Tech</option>
+                <option value="10">Music</option>
+                <option value="6">Fitness</option>
+                <option value="8">Educational</option>
+                <option value="5">Miscellaneous</option>
+            </select>
+        </div>
+        
+        <div class="mb-3">
+            <label for="location" class="form-label">Location:</label>
+            <input type="text" id="location" placeholder="Enter Location" name="location" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="date" class="form-label">Date:</label>
+            <input type="date" id="date" name="date" class="form-control" required>
+        </div>
+        
+        <div class="mb-3">
+            <label for="time" class="form-label">Time:</label>
+            <input type="time" id="time" name="event_time" class="form-control" required>
+        </div>
+        
+        <div class="mb-3">
+            <label for="capacity" class="form-label">Capacity:</label>
+            <input type="number" id="capacity" placeholder="Enter Capacity" name="capacity" class="form-control" min="1" required>
+        </div>
+        
+        <div class="mb-3">
+            <label for="paid" class="form-label">Ticket Price:</label>
+            <select id="paid" name="paid" class="form-control" onchange="toggleCostField()" required>
+                <option value="free">Free</option>
+                <option value="paid">Paid</option>
+            </select>
+        </div>
+        
+        <div class="mb-3" id="cost-container" style="display: none;">
+            <label for="cost" class="form-label">Cost:</label>
+            <input type="number" id="cost" name="ticket_price" class="form-control" min="0" step="0.01">
+        </div>
+        
+        <div class="mb-3">
+            <label for="image" class="form-label">Upload Image:</label>
+            <input type="file" id="image" name="image_url" class="form-control" accept="image/png, image/jpeg, image/jpg">
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Add Event</button>
+    </form>
+</div>
+
+<script>
+    function toggleCostField() {
+        const paidSelect = document.getElementById('paid');
+        const costContainer = document.getElementById('cost-container');
+        costContainer.style.display = paidSelect.value === 'paid' ? 'block' : 'none';
+    }
+</script>
+
+<script>
+    function toggleCostField() {
+        const paidSelect = document.getElementById('paid');
+        const costContainer = document.getElementById('cost-container');
+        const costInput = document.getElementById('cost');
+        
+        if (paidSelect.value === 'paid') {
+            costContainer.style.display = 'block';
+            costInput.setAttribute('required', 'required'); // Set required if paid
+        } else {
+            costContainer.style.display = 'none';
+            costInput.removeAttribute('required'); // Remove required if free
+            costInput.value = ''; // Clear the value if switching back to free
+        }
+    }
+</script>
+{% endblock %}

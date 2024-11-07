@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+
+{% block title %}Main App - Event Finder{% endblock %}
+
+{% block content %}
+<style>
+    .list-group-item a {
+        color: inherit;  /* Inherit color from parent element */
+        text-decoration: none; /* Remove underline */
+    }
+
+    .list-group-item a:hover {
+        text-decoration: none; /* Remove underline on hover */
+        color: inherit; /* Keep the same color on hover */
+    }
+</style>
+
+<div class="container">
+    <h1>Welcome to the Event Finder App!</h1>
+    <p>Here are some events happening around Atlanta, GA:</p>
+    
+    <!-- Filter Button -->
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#filterModal">
+        Open Filters
+    </button>
+    <br>
+
+    <!-- Filter Modal -->
+    <div class="modal fade" id="filterModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="filterModalLabel">Filter Events</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="filterForm">
+                        <div class="mb-3">
+                            <label for="distance" class="form-label">Distance (miles)</label>
+                            <input type="number" class="form-control" id="distance" placeholder="Enter distance">
+                        </div>
+                        <div class="mb-3">
+                            <label for="cost" class="form-label">Max Cost</label>
+                            <input type="number" class="form-control" id="cost" placeholder="Enter max cost">
+                        </div>
+                        <div class="mb-3">
+                            <label for="eventType" class="form-label">Event Type</label>
+                            <select class="form-select" id="eventType">
+                                <option value="">All Events</option>
+                                <option value="free">Free</option>
+                                <option value="paid">Paid</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Category</label>
+                            <select class="form-select" id="category">
+                                <option value="">Select Category</option>
+                                <option value="music">Music</option>
+                                <option value="food">Food</option>
+                                <option value="art">Art</option>
+                                <!-- Add more categories as needed -->
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="sort" class="form-label">Sort By</label>
+                            <select class="form-select" id="sort">
+                                <option value="ascending">Ascending</option>
+                                <option value="descending">Descending</option>
+                                <option value="lowest-highest">Lowest to Highest</option>
+                                <option value="highest-lowest">Highest to Lowest</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-danger" onclick="resetFilters()">Reset Filters</button>
+                    <button type="button" class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <br>
+    <h5>Event Locations</h5>
+    <div id="map" style="height: 400px;"></div>
+
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
+
+<script>
+    let map; // Declare map globally to access across functions
+
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(showPosition, showError);
+        } else {
+            alert("Geolocation is not supported by this browser.");
+        }
+    }
+
+    function showPosition(position) {
+        const userLat = position.coords.latitude;
+        const userLon = position.coords.longitude;
+        initializeMap(userLat, userLon); // Initialize the map with the user's location
+    }
+
+    function initializeMap(lat, lon) {
+        map = L.map('map').setView([lat, lon], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+        L.marker([lat, lon]).addTo(map).bindPopup('You are here!').openPopup();
+        
+        // Disable adding markers on map click
+        map.on('click', function(e) {
+            // Prevent default click behavior (no action on click)
+        });
+    }
+
+    function geocodeAddress(address, callback) {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    const lat = data[0].lat;
+                    const lon = data[0].lon;
+                    callback(lat, lon);
+                } else {
+                    alert("Address not found.");
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching the geocode:", error);
+                alert("Failed to fetch location data.");
+            });
+    }
+
+    function addEventMarker(lat, lon) {
+        L.marker([lat, lon]).addTo(map).bindPopup('Event Location').openPopup();
+    }
+
+    function showError(error) {
+        switch(error.code) {
+            case error.PERMISSION_DENIED:
+                alert("User denied the request for Geolocation.");
+                break;
+            case error.POSITION_UNAVAILABLE:
+                alert("Location information is unavailable.");
+                break;
+            case error.TIMEOUT:
+                alert("The request to get user location timed out.");
+                break;
+            case error.UNKNOWN_ERROR:
+                alert("An unknown error occurred.");
+                break;
+        }
+    }
+    
+    // Get the user's location when the page loads
+    window.onload = function() {
+        getLocation();
+    }
+</script>
+<br>
+
+
+    <div class="list-group">
+        {% for event in events %}
+            <div class="list-group-item">
+                <a href="{{ url_for('event_details', event_id=loop.index0) }}">
+                    <div>  
+                        <img src="{{ url_for('static', filename='images/' + event.image) }}" class="img-fluid" alt="{{ event.name }}" style="border-radius: 8px; max-width: 20vh; max-height: 15vh;"> <!-- Full-width image -->
+    
+                        <h5 class="mt-3" style="font-size: 1.8rem;">{{ event.name }}</h5>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p class="card-text"><strong>Location:</strong> {{ event.location }}</p>
+                                        <p class="card-text"><strong>Address:</strong> {{ event.address }}</p>
+                                        <p class="card-text"><strong>Category:</strong> {{ event.category }}</p>
+                                        <p class="card-text"><strong>Venue:</strong> {{ event.venue }}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p class="card-text"><strong>Time:</strong> {{ event.time }}</p>
+                                        <p class="card-text"><strong>Capacity:</strong> {{ event.capacity }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="border p-3" style="font-size: 1.5rem; background-color: #f8f9fa;">
+                                    <strong>
+                                        {% if event.paid %}
+                                            ${{ event.cost }}
+                                        {% else %}
+                                            Free
+                                        {% endif %}
+                                    </strong>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Add to List Button -->
+                        <button class="btn btn-link" onclick="toggleStar(this)">
+                            <i class="far fa-star" style="font-size: 1.5rem;"></i> Add to List
+                        </button>
+                    </div> 
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    function toggleStar(button) {
+        const starIcon = button.querySelector('i');
+        if (starIcon.classList.contains('far')) {
+            starIcon.classList.remove('far');
+            starIcon.classList.add('fas'); // Filled star
+        } else {
+            starIcon.classList.remove('fas');
+            starIcon.classList.add('far'); // Empty star
+        }
+    }
+
+
+    function applyFilters() {
+        const distance = document.getElementById('distance').value;
+        const cost = document.getElementById('cost').value;
+        const eventType = document.getElementById('eventType').value;
+        const category = document.getElementById('category').value;
+        const sort = document.getElementById('sort').value;
+
+        // Construct the query string
+        let queryString = `?distance=${distance}&cost=${cost}&eventType=${eventType}&category=${category}`;
+
+        // Fetch filtered events from the server
+        fetch(`/filter${queryString}`)
+            .then(response => response.text())
+            .then(html => {
+                // Replace the existing events list with the filtered events
+                document.querySelector('.list-group').innerHTML = new DOMParser().parseFromString(html, 'text/html').querySelector('.list-group').innerHTML;
+            })
+            .catch(error => console.error('Error fetching filtered events:', error));
+
+        // Close the modal after applying filters
+        const modal = bootstrap.Modal.getInstance(document.getElementById('filterModal'));
+        modal.hide();
+    }
+
+    function resetFilters() {
+    // Clear all inputs in the filter form
+    document.getElementById('distance').value = '';
+    document.getElementById('cost').value = '';
+    document.getElementById('eventType').value = '';
+    document.getElementById('category').value = '';
+    document.getElementById('sort').value = 'ascending'; // Reset to default sort option
+
+    // Optionally, if you want to immediately apply the reset to show all events:
+    applyFilters();
+}
+</script>
+
+{% endblock %}

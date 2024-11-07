@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign Up - Event Finder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Sign Up</h1>
+    <form method="POST">
+        {% if error %}
+            <div class="alert alert-danger">{{error }}</div>  
+        {% endif %}
+    <form method="POST">
+        <div class="mb-3">
+            <label for="email" class="form-label">Email:</label>
+            <input type="email" id="email" name="email" class="form-control" required>
+           
+        </div>
+        <div class="mb-3">
+            <label for="password" class="form-label">Password:</label>
+            <input type="password" id="password" name="password" class="form-control" required>
+            
+        </div>
+        <button type="submit" class="btn btn-primary">Sign Up</button>
+    </form>
+    <p>Already have an account? <a href="/signin">Sign In</a></p>
+</div>
+{% endblock %}
