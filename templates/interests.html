@@ -3,24 +3,29 @@
 {% block title %}Interests - Event Finder{% endblock %}
 
 {% block content %}
+<!-- Center the entire section with some padding -->
+<div class="container my-5">
+    <h2 class="text-center mb-4">Hey there, {{ session['first_name'] }}! Welcome to The Horizon!</h2>
+    <p class="text-center mb-5">Before you jump into things, want to add a few interests to your profile? Just click on what you like!</p>
 
-<script>
-
-</script>
-
-<h2 style="text-align: center;">Hey there, {{ session['first_name'] }}! Welcome to The Horizon! Before you jump into things, want to add a few interests to your profile? Just click on what you like!
-</h2>
-
-
-
-<div>
     <form method="POST" action="/submitInterests">
-    {%for category in categories%}
-        <input type="checkbox" id={{category.category_id}}, name="interests" value="{{ category.category_id }}">
-        <label>{{category.category_name}}</label><br>
-    {%endfor%}
-    <button type="submit">Submit</button>
-</form>
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <!-- Iterate through each category and create checkboxes -->
+                {% for category in categories %}
+                    <div class="form-check mb-3">
+                        <input type="checkbox" class="form-check-input" id="category_{{ category.category_id }}" name="interests" value="{{ category.category_id }}">
+                        <label class="form-check-label" for="category_{{ category.category_id }}">{{ category.category_name }}</label>
+                    </div>
+                {% endfor %}
+                
+                <!-- Submit button -->
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary btn-lg">Submit</button>
+                </div>
+            </div>
+        </div>
+    </form>
 </div>
 
 {% endblock %}

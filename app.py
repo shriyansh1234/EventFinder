@@ -123,7 +123,7 @@ def signup():
             error_messege ="Email or pass word need to be fill out"
             return render_template("signup.html", error=error_messege)
         if user_exists(email):
-            error_messege ="User is already exist!"
+            error_messege ="Useralready exist!"
             return render_template("signup.html", error=error_messege)
         
         user_id = add_user(email, password)
@@ -187,23 +187,46 @@ def signin():
         data = request.form
         email = data.get('email')
         password = data.get('password')
+        
         if not email or not password:
-            return jsonify({"error": "All fields are required"}),400
-        print(user_and_password(email,password))
-        userinfo = user_and_password(email,password)
-        if(userinfo[user_exists]):
-            session['user_id'] = userinfo['user']['user_id'] #keeps track of user logged in
+            return jsonify({"error": "All fields are required"}), 400
+        
+        # Check if email and password are correct
+        userinfo = user_and_password(email, password)
+        print(userinfo)
+        if userinfo['user_exists']:
+            session['user_id'] = userinfo['user']['user_id']  # Keeps track of user logged in
+            
+            # Check if the user is an organizer and fetch additional details from the Organizer table
+            user_id = userinfo['user']['user_id']
+            organizer_info = get_organizer_info(user_id)
+            print("Hello", organizer_info)
+            if organizer_info:
+                session['is_organizer'] = True
+                session['company_name'] = organizer_info['company_name']
+                session['address'] = organizer_info['address']
+                session['phone'] = organizer_info['phone']
+            else:
+                session['is_organizer'] = False
+            
             return redirect(url_for('main_app'))
         else:
             return render_template('signin.html', error="Invalid email or password")
+    
     return render_template('signin.html')
 
-#Check if email and password is correct 
-def user_and_password(email,password):
+def get_organizer_info(user_id):
+    query = "SELECT company_name, address, phone FROM Organizer WHERE user_id = ?"
+    organizer_info = query_db(query, (user_id,), one=True)
+    return organizer_info
+
+
+def user_and_password(email, password):
     query = "SELECT * FROM Accounts WHERE email =? AND user_pw =?"
-    user = query_db(query,(email,password),one=True)
-    print(user)
-    return {user_exists: user is not None, 'user': user}
+    user = query_db(query, (email, password), one=True)
+    
+    # Check if user exists and return in the correct format
+    return {'user_exists': user is not None, 'user': user}
 
 
 
@@ -299,32 +322,71 @@ def setname():
 def submitname():
     Fname = request.form.get('firstname')
     Lname = request.form.get('lastname')
+    is_organizer = request.form.get('organizer')  # "Yes" or "No"
+    company_name = request.form.get('business_name') if is_organizer == "yes" else None
+    address = request.form.get('business_address') if is_organizer == "yes" else None
+    phone = request.form.get('business_phone') if is_organizer == "yes" else None
+    
     userid = session.get('user_id')
+    
     if userid is not None:
-            connection = connect_to_aws_rds()  # Assumes connect_to_aws_rds() sets up your database connection
-            if connection is None:
-                print("Connection to the database failed.")
-                return jsonify({"error": "Database connection failed"}), 500
-            
-            try:
-                cursor = connection.cursor()
-                query = "UPDATE Accounts SET first_name = ?, last_name = ? WHERE user_id = ?"
-                cursor.execute(query, (Fname, Lname, userid))
-                connection.commit()  # Commit the transaction
-                session['first_name'] = Fname
-                print(f"User ID {userid} name updated successfully to {Fname} {Lname}")
-                return redirect(url_for('interests'))
-                
-            except pyodbc.Error as error:
-                print(f"Database error: {error}")
-                return jsonify({"error": "Database update failed"}), 500
-            
-            finally:
-                cursor.close()
-                connection.close()
+        connection = connect_to_aws_rds()  # Assumes connect_to_aws_rds() sets up your database connection
         
+        if connection is None:
+            print("Connection to the database failed.")
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        try:
+            cursor = connection.cursor()
+            
+            # Update the user's name in the Accounts table
+            query = "UPDATE Accounts SET first_name = ?, last_name = ? WHERE user_id = ?"
+            cursor.execute(query, (Fname, Lname, userid))
+            connection.commit()  # Commit the transaction
+            
+            # Update session with the new first name
+            session['first_name'] = Fname
+            print(f"User ID {userid} name updated successfully to {Fname} {Lname}")
+
+            # If the user is an organizer, insert additional details into the Organizer table
+            if is_organizer == "yes":
+                # Update the Accounts table to mark the user as an organizer
+                update_organizer_query = "UPDATE Accounts SET organizer = 1 WHERE user_id = ?"
+                cursor.execute(update_organizer_query, (userid,))
+                connection.commit()  # Commit the transaction
+                print(f"User ID {userid} marked as an organizer in the Accounts table.")
+                
+                # Check if user already exists in the Organizer table
+                check_query = "SELECT COUNT(*) FROM Organizer WHERE user_id = ?"
+                cursor.execute(check_query, (userid,))
+                count = cursor.fetchone()[0]
+                
+                if count == 0:
+                    # Insert the organizer details into the Organizer table
+                    insert_query = """
+                        INSERT INTO Organizer (user_id, company_name, address, phone)
+                        VALUES (?, ?, ?, ?)
+                    """
+                    cursor.execute(insert_query, (userid, company_name, address, phone))
+                    connection.commit()  # Commit the transaction
+                    print(f"User ID {userid} added to the Organizer table with company {company_name}")
+                else:
+                    print(f"User ID {userid} already exists in the Organizer table.")
+            
+            return redirect(url_for('interests'))
+
+        except pyodbc.Error as error:
+            print(f"Database error: {error}")
+            return jsonify({"error": "Database update failed"}), 500
+
+        finally:
+            cursor.close()
+            connection.close()
+    
     else:
         return jsonify({"error": "Not logged in"}), 400
+
+
     
 
 @app.route('/interests')
