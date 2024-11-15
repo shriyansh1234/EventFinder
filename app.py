@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, request, jsonify, session
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session
 import os
 import mysql.connector
 app = Flask(__name__)
@@ -244,32 +244,44 @@ def organizer():
 @app.route('/add-event', methods=['GET', 'POST'])
 def add_event():
     if request.method == 'POST':
-        new_event = {
-            "name": request.form['name'],
-            "location": request.form['location'],
-            "address": request.form['address'],
-            "paid": request.form.get('paid') == 'on',
-            "cost": float(request.form['cost']) if request.form.get('paid') == 'on' else 0,
-            "category": request.form['category'],
-            "venue": request.form['venue'],
-            "time": request.form['time'],
-            "capacity": int(request.form['capacity']),
-            "image": ""  # Placeholder for the image file name
-        }
-
+        # Gather form data
+        event_name = request.form['name']
+        description = request.form['description']
+        category_id = request.form['category_id']
+        location = request.form['location']
+        date = request.form['date']
+        event_time = request.form['event_time']
+        capacity = int(request.form['capacity'])
+        ticket_price = float(request.form['ticket_price']) if request.form.get('paid') == 'paid' else 0.0
+        image_url = ""  # Placeholder for image URL if uploaded
+        
         # Handle image upload
-        if 'image' in request.files:
-            image = request.files['image']
-            if image.filename != '':
+        if 'image_url' in request.files:
+            image = request.files['image_url']
+            if image.filename:
                 image_filename = image.filename
                 image.save(os.path.join(app.config['UPLOAD_FOLDER'], image_filename))
-                new_event['image'] = image_filename
+                image_url = image_filename
         
-        events.append(new_event)  # Append new event to the events list
-        save_events(events)  # Save updated events list to the JSON file
-        return redirect(url_for('organizer'))  # Redirect to the organizer page after adding
+        # SQL query to insert the event
+        query = """
+            INSERT INTO Events (event_name, description, category_id, location, date, event_time, capacity, ticket_price, image_url, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        """
+        
+        params = (event_name, description, category_id, location, date, event_time, capacity, ticket_price, image_url)
+        
+        # Execute query to insert event
+        result = execute_db(query, params)
+        
+        if result is None:
+            flash("Event added successfully!", "success")  # Feedback for successful addition
+            return redirect(url_for('organizer'))
+        else:
+            flash("Failed to add the event. Please try again.", "error")  # Feedback for failure
+            return render_template('/organizer/add_event.html')
 
-    return render_template('/organizer/add_event.html')  # Render the add event form
+    return render_template('/organizer/add_event.html')  # Render the add event form if GET request
 
 @app.route('/event/<int:event_id>')
 def event_details(event_id):
