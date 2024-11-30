@@ -5,52 +5,107 @@
 {% block content %}
 <div class="container">
     <h1>Add New Event</h1>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div>
+              {% for category, message in messages %}
+                <div class="alert alert-success" role="alert">
+                  {{ message }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
     <form method="POST" enctype="multipart/form-data">
-        {% if error %}
-            <div class="alert alert-danger">{{ error }}</div>  
-        {% endif %}
-        
         <div class="mb-3">
             <label for="name" class="form-label">Event Name:</label>
-            <input type="text" id="name" name="name" class="form-control" required>
+            <input type="text" id="name" placeholder="Enter Event Name" name="name" class="form-control" required>
         </div>
+
+        <div class="mb-3">
+            <label for="description" class="form-label">Description:</label>
+            <textarea id="description" placeholder="Enter Description" name="description" class="form-control" rows="3" required></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="category_id" class="form-label">Category:</label>
+            <select id="category_id" name="category_id" class="form-control" required>
+                <option value="" disabled selected>Select Category</option> <!-- Default unselectable option -->
+                <option value="11">Art</option>
+                <option value="7">Cars</option>
+                <option value="4">Food</option>
+                <option value="2">Tech</option>
+                <option value="10">Music</option>
+                <option value="6">Fitness</option>
+                <option value="8">Educational</option>
+                <option value="5">Miscellaneous</option>
+            </select>
+        </div>
+        
         <div class="mb-3">
             <label for="location" class="form-label">Location:</label>
-            <input type="text" id="location" name="location" class="form-control" required>
+            <input type="text" id="location" placeholder="Enter Location" name="location" class="form-control" required>
         </div>
+
         <div class="mb-3">
-            <label for="address" class="form-label">Address:</label>
-            <input type="text" id="address" name="address" class="form-control" required>
+            <label for="date" class="form-label">Date:</label>
+            <input type="date" id="date" name="date" class="form-control" required>
         </div>
-        <div class="mb-3">
-            <label for="paid" class="form-label">Paid Event:</label>
-            <input type="checkbox" id="paid" name="paid">
-        </div>
-        <div class="mb-3">
-            <label for="cost" class="form-label">Cost:</label>
-            <input type="number" id="cost" name="cost" class="form-control" min="0" step="0.01" required>
-        </div>
-        <div class="mb-3">
-            <label for="category" class="form-label">Category:</label>
-            <input type="text" id="category" name="category" class="form-control" required>
-        </div>
-        <div class="mb-3">
-            <label for="venue" class="form-label">Venue:</label>
-            <input type="text" id="venue" name="venue" class="form-control" required>
-        </div>
+        
         <div class="mb-3">
             <label for="time" class="form-label">Time:</label>
-            <input type="datetime-local" id="time" name="time" class="form-control" required>
+            <input type="time" id="time" name="event_start" class="form-control" required>
         </div>
+        
         <div class="mb-3">
             <label for="capacity" class="form-label">Capacity:</label>
-            <input type="number" id="capacity" name="capacity" class="form-control" min="1" required>
+            <input type="number" id="capacity" placeholder="Enter Capacity" name="capacity" class="form-control" min="1" required>
         </div>
+        
+        <div class="mb-3">
+            <label for="paid" class="form-label">Ticket Price:</label>
+            <select id="paid" name="paid" class="form-control" onchange="toggleCostField()" required>
+                <option value="free">Free</option>
+                <option value="paid">Paid</option>
+            </select>
+        </div>
+        
+        <div class="mb-3" id="cost-container" style="display: none;">
+            <label for="cost" class="form-label">Cost:</label>
+            <input type="number" id="cost" name="ticket_price" class="form-control" min="0" step="0.01">
+        </div>
+        
         <div class="mb-3">
             <label for="image" class="form-label">Upload Image:</label>
-            <input type="file" id="image" name="image" class="form-control" accept="image/*" required>
+            <input type="file" id="image" name="image_url" class="form-control" accept="image/png, image/jpeg, image/jpg">
         </div>
+        
         <button type="submit" class="btn btn-primary">Add Event</button>
     </form>
 </div>
+
+<script>
+    function toggleCostField() {
+        const paidSelect = document.getElementById('paid');
+        const costContainer = document.getElementById('cost-container');
+        costContainer.style.display = paidSelect.value === 'paid' ? 'block' : 'none';
+    }
+</script>
+
+<script>
+    function toggleCostField() {
+        const paidSelect = document.getElementById('paid');
+        const costContainer = document.getElementById('cost-container');
+        const costInput = document.getElementById('cost');
+        
+        if (paidSelect.value === 'paid') {
+            costContainer.style.display = 'block';
+            costInput.setAttribute('required', 'required'); // Set required if paid
+        } else {
+            costContainer.style.display = 'none';
+            costInput.removeAttribute('required'); // Remove required if free
+            costInput.value = ''; // Clear the value if switching back to free
+        }
+    }
+</script>
 {% endblock %}

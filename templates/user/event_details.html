@@ -5,17 +5,16 @@
 {% block content %}
 <div class="container">
     <h1>{{ event.name }}</h1>
-    <img src="{{ url_for('static', filename='images/' + event.image) }}" class="img-fluid" alt="{{ event.name }}" style="border-radius: 8px; width: 100%; height: auto;">
-
+        <img src="{{ url_for('static', filename='images/' + event.image_url) }}" class="img-fluid" alt="{{ event.name }}" style="border-radius: 8px; width: 100%; height: auto;">
+    
     <p><strong>Location:</strong> {{ event.location }}</p>
-    <p><strong>Address:</strong> {{ event.address }}</p>
-    <p><strong>Category:</strong> {{ event.category }}</p>
-    <p><strong>Venue:</strong> {{ event.venue }}</p>
-    <p><strong>Time:</strong> {{ event.time }}</p>
+    <p><strong>Category:</strong> {{ event.category_name }}</p>
+    <p><strong>Date:</strong> {{ event.date }}</p>
+    <p><strong>Time:</strong> {{ event.event_start }}</p>
     <p><strong>Capacity:</strong> {{ event.capacity }}</p>
 
     <!-- Map Container -->
-    <h5>Event Location on Map</h5>
+    <h5>Event Location and Route</h5>
     <div id="map" style="height: 400px;"></div> <!-- Set height for the map -->
 
     <h5>Seat Selection</h5>
@@ -24,24 +23,26 @@
     
     {% if event.paid %}
         <p><strong>Cost per seat:</strong> ${{ event.cost }}</p>
-        
         <p><strong>Total Cost:</strong> $<span id="total_cost">{{ event.cost }}</span></p>
-        <form action="{{ url_for('payment') }}" method="GET">
-            <input type="hidden" id="hidden_total_cost" name="total_cost" value="{{ event.cost }}">
-            <input type="hidden" id="hidden_num_seats" name="num_seats" value="1"> <!-- Default to 1 seat -->
-            <button type="submit" class="btn btn-primary">Pay Now</button>
-        </form>
-
-
+        <button class="btn btn-primary" onclick="alert('Mock payment process initiated for {{ event.event_name }}!')">Pay Now</button>
     {% else %}
         <p><strong>This event is free!</strong></p>
-        <button class="btn btn-success" onclick="alert('RSVP confirmed for {{ event.name }}!')">RSVP</button>
+        <form method="POST" action="{{ url_for('event_details', event_id=event.event_id) }}">
+            <button type="submit" class="btn btn-primary">RSVP</button>
+        </form>
     {% endif %}
 </div>
 
+<!-- Leaflet and Routing Machine CSS and JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
+
 <script>
+    let map; // Declare map globally to access across functions
+
     function getLocation() {
-        console.log("Page loaded, attempting to get location...");
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(showPosition, showError);
         } else {
@@ -50,13 +51,64 @@
     }
 
     function showPosition(position) {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        initializeMap(lat, lon); // Initialize the map with the user's location
-        geocodeAddress("265 Park Avenue West NW, Atlanta, GA 30313", (eventLat, eventLon) => {
-    addEventMarker(eventLat, eventLon); // This should add a marker for the event address
-});
+        const userLat = position.coords.latitude;
+        const userLon = position.coords.longitude;
+        initializeMap(userLat, userLon); // Initialize the map with the user's location
 
+        // Geocode the event address
+        geocodeAddress("{{ event.address }}", (eventLat, eventLon) => {
+            addEventMarker(eventLat, eventLon); // Add marker for the event address
+            calculateRoute(userLat, userLon, eventLat, eventLon); // Calculate and display route
+        });
+    }
+
+    function initializeMap(lat, lon) {
+        map = L.map('map').setView([lat, lon], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+        L.marker([lat, lon]).addTo(map).bindPopup('You are here!').openPopup();
+        
+        // Disable adding markers on map click
+        map.on('click', function(e) {
+            // Prevent default click behavior (no action on click)
+        });
+    }
+
+    function geocodeAddress(address, callback) {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    const lat = data[0].lat;
+                    const lon = data[0].lon;
+                    callback(lat, lon);
+                } else {
+                    alert("Address not found.");
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching the geocode:", error);
+                alert("Failed to fetch location data.");
+            });
+    }
+
+    function addEventMarker(lat, lon) {
+        L.marker([lat, lon]).addTo(map).bindPopup('Event Location').openPopup();
+    }
+
+    function calculateRoute(userLat, userLon, eventLat, eventLon) {
+        // Add routing control for route and distance
+        L.Routing.control({
+            waypoints: [
+                L.latLng(userLat, userLon),
+                L.latLng(eventLat, eventLon)
+            ],
+            routeWhileDragging: true,
+            showAlternatives: true
+        }).addTo(map);
     }
 
     function showError(error) {
@@ -75,70 +127,12 @@
                 break;
         }
     }
-    let map;
-    function initializeMap(lat, lon) {
-    // Check if the map is already initialized
-    if (!map) { // Only create the map if it doesn't exist
-        map = L.map('map').setView([lat, lon], 13); // Set the initial view to the user's location
-        
-        // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
-        
-        // Add a marker for the user's location
-        L.marker([lat, lon]).addTo(map).bindPopup('You are here!').openPopup();
-    } else {
-        // If already initialized, just set the view to the new coordinates
-        map.setView([lat, lon], 13);
-    }
-}
-
-    function geocodeAddress(address, callback) {
-        
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
-        
-        console.log("Geocoding address:", address);
-        
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                console.log("Geocode API response:", data); // Log the geocode response
-                console.log("Geocode API full response:", JSON.stringify(data, null, 2)); // Log the full response for detailed inspection
-            
-                if (data.length > 0) {
-                    const lat = data[0].lat;
-                    const lon = data[0].lon;
-                    callback(lat, lon); // Pass coordinates to the callback function
-                } else {
-                    alert("Address not found.");
-                }
-            })
-            .catch(error => {
-                console.error("Error fetching the geocode:", error);
-                alert("Failed to fetch location data.");
-            });
-    }
-
-    function addEventMarker(lat, lon) {
-        if(map)
-        { // Get the existing map instance
-            L.marker([lat, lon]).addTo(map).bindPopup('Event Location').openPopup(); // Add a marker for the event location        
-        }
-        else
-        {
-            console.error("Map is not initialized yet");
-        }
-    }
 
     function updateTotal() {
-        const costPerSeat = parseFloat("{{ event.cost }}");
+        const costPerSeat = parseFloat("{{ event.cost }}" || 0); // Default cost if missing
         const numSeats = parseFloat(document.getElementById('num_seats').value);
         const totalCost = (numSeats > 0) ? costPerSeat * numSeats : 0;
         document.getElementById('total_cost').innerText = totalCost.toFixed(2);
-        document.getElementById('hidden_total_cost').value = totalCost.toFixed(2);
-        document.getElementById('hidden_num_seats').value = numSeats;
     }
     
     // Get the user's location when the page loads
