@@ -57,20 +57,25 @@
             /* Footer text color set to white */
             padding: 10px 0;
         }
+
         .user-info {
             display: flex;
             align-items: center;
-            margin-left: auto; /* Push it to the right */
+            margin-left: auto;
+            /* Push it to the right */
             color: white;
         }
 
         .user-info img {
-            border-radius: 50%; /* Make the image circular */
-            width: 40px; /* Set width */
-            height: 40px; /* Set height */
-            margin-right: 10px; /* Spacing between image and text */
+            border-radius: 50%;
+            /* Make the image circular */
+            width: 40px;
+            /* Set width */
+            height: 40px;
+            /* Set height */
+            margin-right: 10px;
+            /* Spacing between image and text */
         }
-        
     </style>
 </head>
 
@@ -91,14 +96,25 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/signin">Sign In</a>
                     </li>
+                    {% elif request.endpoint in ['setname', 'interests'] %}
+
+                    <li class="nav-item d-flex align-items-center">
+                        <span class="navbar-text me-3">Welcome to EventFinder!</span> <!-- Display the username here -->
+                    </li>
+
                     {% else %}
                     <li class="nav-item d-flex align-items-center">
-                        <img src="{{ url_for('static', filename='images/user_picture.png') }}" alt="User" class="rounded-circle" style="width: 20px; height: 20px; margin-right: 5px;">
-                        <span class="navbar-text me-3">Welcome, {{ username }}</span>  <!-- Display the username here -->
+                        <img src="{{ url_for('static', filename='images/user_picture.png') }}" alt="User"
+                            class="rounded-circle" style="width: 20px; height: 20px; margin-right: 5px;">
+                        <span class="navbar-text me-3">Welcome, {{ session['first_name'] }}</span>
+                        <!-- Display the username here -->
                     </li>
+                    {% if session.get('is_organizer') %}
+                    <!-- Display Organizer link if the user is an organizer -->
                     <li class="nav-item">
                         <a class="nav-link" href="/organizer">Organizer</a>
                     </li>
+                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="/logout">Sign Out</a>
                     </li>

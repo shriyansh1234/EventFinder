@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile - Event Finder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>User Profile</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <!--
+        <div class="mb-3">
+            <label for="Fname" class="form-label">First Name:</label>
+            <input type="text" id="Fname" name="Fname" class="form-control" value="{{ user.fname }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="Lname" class="form-label">Last Name:</label>
+            <input type="text" id="Lname" name="Lname" class="form-control" value="{{ user.lname }}" required>
+        </div>
+        
+        <div class="mb-3">
+            <label for="email" class="form-label">Email:</label>
+            <input type="email" id="email" name="email" class="form-control" value="{{ user.email }}" required>
+        </div>
+    -->
+
+
+
+        <div class="form-group">
+            <label for="Fname">First Name</label>
+            <input type="text" class="form-control" id="Fname" name="Fname" value="{{ user.first_name or '' }}" required>
+        </div>
+        <div class="form-group">
+            <label for="Lname">Last Name</label>
+            <input type="text" class="form-control" id="Lname" name="Lname" value="{{ user.last_name or '' }}" required>
+        </div>
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" class="form-control" id="email" name="email" value="{{ user.email or '' }}" required>
+        </div>
+        <!--
+            ---------------------BIO AND USER IMAGE-------------- not use
+        <div class="mb-3">
+            <label for="bio" class="form-label">Bio:</label>
+            <textarea id="bio" name="bio" class="form-control" rows="3" required>{{ user.bio }}</textarea>
+        </div>
+        
+        <div class="mb-3">
+            <label for="profile_picture" class="form-label">Profile Picture:</label>
+            <input type="file" id="profile_picture" name="profile_picture" class="form-control" accept="image/*">
+            {% if user.profile_picture_url %}
+                <div>
+                    <img src="{{ user.profile_picture_url }}" alt="Current Profile Picture" width="150">
+                </div>
+            {% endif %}
+        </div>
+        -->
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <button type="submit" class="btn btn-primary">Cancel</button>
+    </form>
+</div>
+{% endblock %}
