@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block title %}Main App - Event Finder{% endblock %}
+
+{% block content %}
+
+<div id="container" style="border-style:inset; border-color: pink;  border-radius: 8px; height:auto; width:50%; text-align:center; margin:0 auto;">
+    <h1 style="text-align:center;">You've succesfully RSVPed!</h1>
+    <div id="main" style="margin: 5px;">
+        <div id="pic" style="text-align:center;"> 
+            <img src="{{ url_for('static', filename='images/TheHorizon.png') }}" class="img-fluid" alt="logo" style="border-radius: 8px; width: 50%; height: auto;">
+        </div>
+        <div>
+            <p style = "text-align:center;">You’ll receive a confirmation of your booking via email in a few minutes. When checking into the event, be sure to have it up and ready. Stay safe, and have fun!</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

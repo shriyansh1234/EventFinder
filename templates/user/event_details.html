@@ -4,8 +4,8 @@
 
 {% block content %}
 <div class="container">
-    <h1>{{ event.name }}</h1>
-        <img src="{{ url_for('static', filename='images/' + event.image_url) }}" class="img-fluid" alt="{{ event.name }}" style="border-radius: 8px; width: 100%; height: auto;">
+    <h1>{{ event.event_name }}</h1>
+        <img src="{{ url_for('static', filename='images/' + event.image_url) }}" class="img-fluid" alt="{{ event.event_name }}" style="border-radius: 8px; width: 100%; height: auto;">
     
     <p><strong>Location:</strong> {{ event.location }}</p>
     <p><strong>Category:</strong> {{ event.category_name }}</p>
@@ -21,14 +21,23 @@
     <label for="num_seats">Select number of seats:</label>
     <input type="number" id="num_seats" name="num_seats" min="1" max="{{ event.capacity }}" value="1" step="1" onchange="updateTotal()" onkeydown="return event.keyCode !== 46 && event.keyCode !== 110 && event.keyCode !== 190;">
     
-    {% if event.paid %}
-        <p><strong>Cost per seat:</strong> ${{ event.cost }}</p>
-        <p><strong>Total Cost:</strong> $<span id="total_cost">{{ event.cost }}</span></p>
-        <button class="btn btn-primary" onclick="alert('Mock payment process initiated for {{ event.event_name }}!')">Pay Now</button>
+    {% if event.ticket_price > 0 %}
+        <p><strong>Cost per seat:</strong> ${{ event.ticket_price }}</p>
+        <p><strong>Total Cost:</strong> $<span id="total_cost">{{ event.ticket_price }}</span></p>
+        <form action="/rsvp" method = "POST">
+            <input type="hidden" name="event_id" value="{{ event.event_id }}">
+            <input type="hidden" id="total_price_input" name="total_price" value="{{ event.ticket_price }}">
+            <input type="hidden" id="amount_input" name="amount" value="1">
+            <button class="btn btn-primary" onclick="alert('Mock payment process initiated for {{ event.event_name }}!')">Pay Now</button>
+        </form>
     {% else %}
         <p><strong>This event is free!</strong></p>
-        <form method="POST" action="{{ url_for('event_details', event_id=event.event_id) }}">
-            <button type="submit" class="btn btn-primary">RSVP</button>
+        <p><strong>Total Cost:</strong> $<span id="total_cost">{{ event.ticket_price }}</span></p>
+        <form action = "/rsvp" method = "POST">
+            <input type="hidden" name="event_id" value="{{ event.event_id }}">
+            <input type="hidden" name="total_price" value="0">
+            <input type="hidden" id="amount_input" name="amount" value="1">
+            <button class="btn btn-success" onclick="alert('RSVP confirmed for {{ event.event_name }}!')">RSVP</button>
         </form>
     {% endif %}
 </div>
@@ -56,7 +65,7 @@
         initializeMap(userLat, userLon); // Initialize the map with the user's location
 
         // Geocode the event address
-        geocodeAddress("{{ event.address }}", (eventLat, eventLon) => {
+        geocodeAddress("{{ event.location }}", (eventLat, eventLon) => {
             addEventMarker(eventLat, eventLon); // Add marker for the event address
             calculateRoute(userLat, userLon, eventLat, eventLon); // Calculate and display route
         });
@@ -129,15 +138,26 @@
     }
 
     function updateTotal() {
-        const costPerSeat = parseFloat("{{ event.cost }}" || 0); // Default cost if missing
+        const costPerSeat = parseFloat("{{ event.ticket_price }}" || 0); // Default cost if missing
         const numSeats = parseFloat(document.getElementById('num_seats').value);
+
+        if( costPerSeat > 0) {
         const totalCost = (numSeats > 0) ? costPerSeat * numSeats : 0;
         document.getElementById('total_cost').innerText = totalCost.toFixed(2);
+
+        //update values in form
+        document.getElementById('total_price_input').value = totalCost.toFixed(2);
+        document.getElementById('amount_input').value = numSeats;
+        } else {
+            document.getElementById('amount_input').value = numSeats;
+
+        }
     }
     
     // Get the user's location when the page loads
     window.onload = function() {
         getLocation();
     }
+
 </script>
 {% endblock %}
