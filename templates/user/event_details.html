@@ -5,13 +5,13 @@
 {% block content %}
 <div class="container">
     <h1>{{ event.name }}</h1>
-    <img src="{{ url_for('static', filename='images/' + event.image) }}" class="img-fluid" alt="{{ event.name }}" style="border-radius: 8px; width: 100%; height: auto;">
+    <img src="{{ url_for('static', filename='images/' + event.image_url) }}" class="img-fluid" alt="{{ event.name }}" style="border-radius: 8px; width: 100%; height: auto;">
 
     <p><strong>Location:</strong> {{ event.location }}</p>
-    <p><strong>Address:</strong> {{ event.address }}</p>
-    <p><strong>Category:</strong> {{ event.category }}</p>
-    <p><strong>Venue:</strong> {{ event.venue }}</p>
-    <p><strong>Time:</strong> {{ event.time }}</p>
+    <p><strong>Category:</strong> {{ event.category_name }}</p>
+    <p><strong>Date:</strong> {{ event.date }}</p>
+    <p><strong>Start Time:</strong> {{ event.event_start }}</p>
+    <p><strong>End Time:</strong> {{ event.event_end }}</p>
     <p><strong>Capacity:</strong> {{ event.capacity }}</p>
 
     <!-- Map Container -->
@@ -25,10 +25,12 @@
     {% if event.paid %}
         <p><strong>Cost per seat:</strong> ${{ event.cost }}</p>
         <p><strong>Total Cost:</strong> $<span id="total_cost">{{ event.cost }}</span></p>
-        <button class="btn btn-primary" onclick="alert('Mock payment process initiated for {{ event.name }}!')">Pay Now</button>
+        <button class="btn btn-primary" onclick="alert('Mock payment process initiated for {{ event.event_name }}!')">Pay Now</button>
     {% else %}
         <p><strong>This event is free!</strong></p>
-        <button class="btn btn-success" onclick="alert('RSVP confirmed for {{ event.name }}!')">RSVP</button>
+        <form method="POST" action="{{ url_for('event_details', event_id=event.event_id) }}">
+            <button type="submit" class="btn btn-primary">RSVP</button>
+        </form>
     {% endif %}
 </div>
 
@@ -52,10 +54,12 @@
     function showPosition(position) {
         const userLat = position.coords.latitude;
         const userLon = position.coords.longitude;
+        const eventAddress = "{{ event.location }}";
+
         initializeMap(userLat, userLon); // Initialize the map with the user's location
 
-        // Geocode the event address
-        geocodeAddress("{{ event.address }}", (eventLat, eventLon) => {
+        // Geocode the event location (Replace with your own geocoding API if required)
+        geocodeAddress(eventAddress, (eventLat, eventLon) => {
             addEventMarker(eventLat, eventLon); // Add marker for the event address
             calculateRoute(userLat, userLon, eventLat, eventLon); // Calculate and display route
         });
@@ -63,51 +67,62 @@
 
     function initializeMap(lat, lon) {
         map = L.map('map').setView([lat, lon], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap, © CartoDB',
+            maxZoom: 19
         }).addTo(map);
+
         L.marker([lat, lon]).addTo(map).bindPopup('You are here!').openPopup();
-        
-        // Disable adding markers on map click
-        map.on('click', function(e) {
-            // Prevent default click behavior (no action on click)
+
+        map.off('click');
+    }
+
+    function addEventMarker(eventLat, eventLon) {
+        var eventIcon = L.icon({
+            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
         });
-    }
 
-    function geocodeAddress(address, callback) {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                if (data.length > 0) {
-                    const lat = data[0].lat;
-                    const lon = data[0].lon;
-                    callback(lat, lon);
-                } else {
-                    alert("Address not found.");
-                }
-            })
-            .catch(error => {
-                console.error("Error fetching the geocode:", error);
-                alert("Failed to fetch location data.");
-            });
-    }
-
-    function addEventMarker(lat, lon) {
-        L.marker([lat, lon]).addTo(map).bindPopup('Event Location').openPopup();
+        L.marker([eventLat, eventLon], { icon: eventIcon }).addTo(map).bindPopup('Event Location');
     }
 
     function calculateRoute(userLat, userLon, eventLat, eventLon) {
-        // Add routing control for route and distance
-        L.Routing.control({
-            waypoints: [
-                L.latLng(userLat, userLon),
-                L.latLng(eventLat, eventLon)
-            ],
-            routeWhileDragging: true,
-            showAlternatives: true
-        }).addTo(map);
+    L.Routing.control({
+        waypoints: [
+            L.latLng(userLat, userLon),
+            L.latLng(eventLat, eventLon)
+        ],
+        routeWhileDragging: true,
+        show: true,
+        lineOptions: {
+            styles: [
+                {
+                    color: 'red',
+                    weight: 5,
+                    opacity: 0.7
+                }
+            ]
+        }
+    }).addTo(map);
+}
+
+    function geocodeAddress(address, callback) {
+        // Simple geocoding using Nominatim
+        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json`)
+            .then(response => response.json())
+            .then(data => {
+                if (data && data[0]) {
+                    const lat = parseFloat(data[0].lat);
+                    const lon = parseFloat(data[0].lon);
+                    callback(lat, lon);
+                } else {
+                    alert('Unable to geocode the event address.');
+                }
+            })
+            .catch(error => console.error('Geocoding error:', error));
     }
 
     function showError(error) {
