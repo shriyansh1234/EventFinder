@@ -5,6 +5,17 @@
 {% block content %}
 <div class="container">
     <h1>Add New Event</h1>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div>
+              {% for category, message in messages %}
+                <div class="alert alert-success" role="alert">
+                  {{ message }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
     <form method="POST" enctype="multipart/form-data">
         <div class="mb-3">
             <label for="name" class="form-label">Event Name:</label>
@@ -42,8 +53,13 @@
         </div>
         
         <div class="mb-3">
-            <label for="time" class="form-label">Time:</label>
-            <input type="time" id="time" name="event_time" class="form-control" required>
+            <label for="time" class="form-label">Time Start:</label>
+            <input type="time" id="time" name="event_start" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="time" class="form-label">Time End:</label>
+            <input type="time" id="time" name="event_end" class="form-control" required>
         </div>
         
         <div class="mb-3">

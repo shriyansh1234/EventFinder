@@ -6,6 +6,28 @@
 <div class="container">
     <h1>Organizer Dashboard</h1>
     <p>Welcome to your dashboard! Here you can manage your events effectively.</p>
+    
+    
+    <!--                   
+                    flash success or failure messege
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div>
+            {% for category, message in messages %}
+            <div class="alert alert-success" role="alert">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endwith %}
+    -->
+    
+    
+
+
+
 
     <div class="row">
         <div class="col-md-4 mb-4">
@@ -58,5 +80,59 @@
             </div>
         </div>
     </div>
+
+ 
+    <!--With modal display-->
+    <div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="feedbackModalLabel">Notification</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <p id="modalMessage"></p> <!-- Dynamic message content -->
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
 </div>
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <script>
+            // Trigger the modal when the page loads
+            document.addEventListener('DOMContentLoaded', function() {
+                // Get the flashed message
+                var message = "{{ messages[0] }}";  // Get the first flashed message (if any)
+                document.getElementById('modalMessage').textContent = message;
+
+                // Show the modal
+                let modal = new bootstrap.Modal(document.getElementById('feedbackModal'));
+                modal.show();
+            });
+        </script>
+    {% endif %}
+{% endwith %}
+<!--logic javascript
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <script>
+            // Trigger the modal when the page loads
+            document.addEventListener('DOMContentLoaded', function() {
+                // Set the modal's message
+                document.getElementById('modalMessage').textContent = "{{ messages[0] }}";
+
+                // Show the modal
+                let modal = new bootstrap.Modal(document.getElementById('feedbackModal'));
+                modal.show();
+            });
+        </script>
+    {% endif %}
+{% endwith %}
+-->
 {% endblock %}

@@ -3,9 +3,14 @@ import os
 import mysql.connector
 app = Flask(__name__)
 # Your existing event data...
-from events import events, save_events  # Import save_events function
+#from events import events, save_events  # Import save_events function
 from datetime import datetime, timedelta
 import pyodbc
+
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
 
 print(pyodbc.drivers())
 
@@ -130,6 +135,7 @@ def signup():
 
         if(user_id):
             session['user_id'] = user_id
+            session['email'] = email
             return redirect(url_for('setname'))
         else:
             error_messege ="Sign up fail"
@@ -193,10 +199,10 @@ def signin():
         
         # Check if email and password are correct
         userinfo = user_and_password(email, password)
-        print(userinfo)
+        print("User Info: ", userinfo)
         if userinfo['user_exists']:
             session['user_id'] = userinfo['user']['user_id']  # Keeps track of user logged in
-            
+            session['email'] = userinfo['user']['email']
             # Check if the user is an organizer and fetch additional details from the Organizer table
             user_id = userinfo['user']['user_id']
             organizer_info = get_organizer_info(user_id)
@@ -233,10 +239,28 @@ def user_and_password(email, password):
 
 @app.route('/app')
 def main_app():
+    events=pull_data()
     return render_template('/user/mainapp.html', events=events)
+def pull_data():
+    user_id = session.get('user_id')
+    query = """
+        SELECT e.event_id, e.organizer_id, e.event_name, e.description, c.category_name, e.location, e.date, e.capacity, e.ticket_price, e.tickets_booked, e.created_at,e.image_url
+        FROM Events e
+        JOIN Categories c ON e.category_id = c.category_id
+        LEFT JOIN Interests i ON e.category_id = i.category_id AND i.user_id = ?
+        ORDER BY i.user_id DESC, e.date ASC
+
+    """
+    events = query_db(query, (user_id))
+    return events
+
+
+
+
 
 @app.route('/organizer')
 def organizer():
+    ##messege: request.args.get('message')
     return render_template('/organizer/organizer.html')  # Create this template for the Organizer page
 
 
@@ -244,17 +268,16 @@ def organizer():
 @app.route('/add-event', methods=['GET', 'POST'])
 def add_event():
     if request.method == 'POST':
-        # Gather form data
         event_name = request.form['name']
         description = request.form['description']
         category_id = request.form['category_id']
         location = request.form['location']
         date = request.form['date']
-        event_time = request.form['event_time']
+        event_start = request.form['event_start']
+        event_end = request.form['event_end']
         capacity = int(request.form['capacity'])
         ticket_price = float(request.form['ticket_price']) if request.form.get('paid') == 'paid' else 0.0
         image_url = ""  # Placeholder for image URL if uploaded
-        
         # Handle image upload
         if 'image_url' in request.files:
             image = request.files['image_url']
@@ -262,34 +285,55 @@ def add_event():
                 image_filename = image.filename
                 image.save(os.path.join(app.config['UPLOAD_FOLDER'], image_filename))
                 image_url = image_filename
-        
-        # SQL query to insert the event
+        user_id = session.get('user_id')
+        organizer_query = " SELECT organizer_id FROM Organizer WHERE user_id = ? "
+        organizer = query_db(organizer_query,(user_id,),one = True)
+        organizer_id = organizer['organizer_id']
+        params = (organizer_id,event_name, description, category_id, location, date, event_start,event_end, capacity, ticket_price, image_url)
         query = """
-            INSERT INTO Events (event_name, description, category_id, location, date, event_time, capacity, ticket_price, image_url, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            INSERT INTO Events (organizer_id,event_name, description, category_id, location, date, event_start,event_end ,  capacity, ticket_price, image_url, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         """
-        
-        params = (event_name, description, category_id, location, date, event_time, capacity, ticket_price, image_url)
-        
-        # Execute query to insert event
+    
         result = execute_db(query, params)
         
         if result is None:
-            flash("Event added successfully!", "success")  # Feedback for successful addition
+            flash("Event added successfully!", "success") 
             return redirect(url_for('organizer'))
         else:
-            flash("Failed to add the event. Please try again.", "error")  # Feedback for failure
+            flash("Failed to add the event. Please try again.", "error")  
             return render_template('/organizer/add_event.html')
 
-    return render_template('/organizer/add_event.html')  # Render the add event form if GET request
+    return render_template('/organizer/add_event.html') 
 
-@app.route('/event/<int:event_id>')
+
+
+
+
+
+@app.route('/event/<int:event_id>',methods=['GET','POST'])
 def event_details(event_id):
-    if 0 <= event_id < len(events):
-        event = events[event_id]  # Get the specific event based on its index
-        return render_template('/user/event_details.html', event=event)
-    return redirect(url_for('main_app'))  # Redirect if the event does not exist
+    query = """
+        SELECT e.event_id, e.event_name, e.description, c.category_name, e.location, e.date, e.event_start, e.capacity, e.ticket_price, e.tickets_booked, e.image_url
+        FROM Events e
+        JOIN Categories c ON e.category_id = c.category_id
+        WHERE e.event_id = ?
+    """
 
+    event_details = query_db(query, (event_id,), one=True)
+
+    if event_details is not None:
+            # If RSVP is clicked, flash a message and redirect to main app
+            if request.method == 'POST':  # This will trigger if the RSVP button is clicked
+                flash("You have successfully RSVPd for the event!")  
+                return redirect(url_for('main_app'))  
+            
+            return render_template('/user/event_details.html', event=event_details)
+    else:
+            # If event not found, redirect to main app
+            return redirect(url_for('main_app'))
+
+""""
 @app.route('/filter', methods=['GET'])
 def filter_events():
     distance = request.args.get('distance', type=float)
@@ -297,12 +341,11 @@ def filter_events():
     event_type = request.args.get('eventType')
     category = request.args.get('category')
 
-
     # print(events)
     # print(category)
     # Apply filtering logic
     filtered_events = events
-
+    
     if event_type == 'free':
         filtered_events = [event for event in filtered_events if not event['paid']]
     elif event_type == 'paid':
@@ -316,7 +359,113 @@ def filter_events():
         filtered_events = [event for event in filtered_events if event['cost'] <= max_cost]
 
     return render_template('/user/mainapp.html', events=filtered_events)  # Render the filtered events
+"""""
+@app.route('/filter', methods=['GET'])
+def filter_events():
+    # Fetch filtering parameters
+    distance = request.args.get('distance', type=float)
+    max_cost = request.args.get('cost', type=float)
+    event_type = request.args.get('eventType')
+    category = request.args.get('category')
+    start_date = request.args.get('startDate')
+    end_date = request.args.get('endDate')
 
+    # Base SQL query
+    query = """
+        SELECT e.event_id, e.event_name, e.description, c.category_name, e.location, e.date, e.capacity, e.ticket_price, e.tickets_booked, e.image_url
+        FROM Events e
+        JOIN Categories c ON e.category_id = c.category_id
+        WHERE 1 = 1
+    """
+    params = []
+
+    # Apply filters
+    if category:
+        query += " AND LOWER(c.category_name) = LOWER(?)"
+        params.append(category)
+
+    if max_cost is not None:
+        query += " AND e.ticket_price <= ?"
+        params.append(max_cost)
+
+    if event_type:
+        if event_type.lower() == 'free':
+            query += " AND e.ticket_price = 0"
+        elif event_type.lower() == 'paid':
+            query += " AND e.ticket_price > 0"
+
+    if start_date:
+        query += " AND e.date >= ?"
+        params.append(start_date)
+
+    if end_date:
+        query += " AND e.date <= ?"
+        params.append(end_date)
+
+    # Execute query
+    events = query_db(query, params)
+    if events is not None:
+        return render_template('/user/mainapp.html', events=events)
+    else:
+        flash("No events match your filters.", "error")
+        return redirect(url_for('main_app'))
+    
+
+@app.route('/rsvp', methods=['POST'])
+def book_event():
+    userid = session.get('user_id')
+    event = request.form.get('event_id')
+    total = request.form.get('total_price')
+    tickets = request.form.get('amount')
+    booked = datetime.now()
+
+    if userid is not None:
+        connection = connect_to_aws_rds()
+        if connection is None:
+            return jsonify({"error": "Database connection failed"}), 500
+
+        try:
+            cursor = connection.cursor()
+            query = """INSERT INTO Tickets (event_id, user_id, booking_date, ticket_amount, total_price)
+                       VALUES(?, ?, ?, ?, ?)"""
+            cursor.execute(query, (event, userid, booked, tickets, total))
+            connection.commit()
+
+            # Fetch user and event details to send email
+            user_email = session.get('email')
+            event_details = query_db(
+                "SELECT event_name, date, location, ticket_price FROM Events WHERE event_id = ?", 
+                (event,), one=True
+            )
+
+
+
+            if event_details:
+                send_booking_confirmation_email(
+                    to=user_email,
+                    user_name=session.get('first_name', 'Guest'),
+                    event_name=event_details['event_name'],
+                    event_date=event_details['date'],
+                    event_location=event_details['location'],
+                    event_cost=event_details['ticket_price']
+                )
+
+            return redirect(url_for('confirm'))
+
+        except pyodbc.Error as error:
+            return jsonify({"error": "Database error"}), 500
+
+        finally:
+            cursor.close()
+            connection.close()
+
+    return jsonify({"error": "Not logged in"}), 400
+
+
+
+@app.route('/confirmation')
+def confirm():
+    return render_template('confirmation.html')
 
 
 @app.route('/logout')
@@ -440,5 +589,148 @@ def submitInterests():
         return jsonify({"error": "Not logged in"}), 400
     #return jsonify(interests)
 
+def send_booking_confirmation_email(to, user_name, event_name, event_date, event_location, event_cost):
+    try:
+        smtp_server = "smtp.gmail.com"
+        smtp_port = 587
+        smtp_user = "eventfinder.swe@gmail.com"  # Replace with your email
+        smtp_password = "spiy xqut yeqt ntvm"     # Replace with your email password
+
+        print("Starting email sending process...")
+        print(f"Recipient: {to}")
+        print(f"Event Details: {event_name}, {event_date}, {event_location}, {event_cost}")
+
+        # Email content
+        subject = "Booking Confirmation - Event Finder"
+
+        text_body = f"""
+        Hello {user_name},
+
+        Thank you for RSVPing to the event "{event_name}"!
+
+        Event Details:
+        - Name: {event_name}
+        - Date: {event_date}
+        - Location: {event_location}
+        - Cost: {"Free" if event_cost == 0 else f"${event_cost}"}
+
+        You’ll receive this confirmation email as proof of your RSVP. Please have it ready when checking into the event.
+
+        Stay safe and enjoy your time at the event!
+
+        Best regards,
+        Event Finder Team
+        """
+        print("Plain text body constructed.")
+
+        html_body = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Booking Confirmation</title>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    margin: 0;
+                    padding: 0;
+                }}
+                .container {{
+                    width: 100%;
+                    max-width: 600px;
+                    margin: 0 auto;
+                    padding: 20px;
+                    background-color: #f9f9f9;
+                    border: 1px solid #ddd;
+                    border-radius: 8px;
+                }}
+                .header {{
+                    background-color: #28a745;
+                    color: #ffffff;
+                    padding: 10px 20px;
+                    border-radius: 8px 8px 0 0;
+                    text-align: center;
+                }}
+                .content {{
+                    padding: 20px;
+                }}
+                .footer {{
+                    text-align: center;
+                    padding: 10px;
+                    font-size: 0.9em;
+                    color: #777;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Booking Confirmation</h1>
+                </div>
+                <div class="content">
+                    <p>Hello {user_name},</p>
+                    <p>Thank you for RSVPing to the event "<strong>{event_name}</strong>"!</p>
+                    <p><strong>Event Details:</strong></p>
+                    <ul>
+                        <li><strong>Date:</strong> {event_date}</li>
+                        <li><strong>Location:</strong> {event_location}</li>
+                        <li><strong>Cost:</strong> {"Free" if event_cost == 0 else f"${event_cost}"}</li>
+                    </ul>
+                    <p>You’ll receive this confirmation email as proof of your RSVP. Please have it ready when checking into the event.</p>
+                </div>
+                <div class="footer">
+                    <p>Event Finder Team</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        print("HTML body constructed.")
+
+        # Construct the email
+        msg = MIMEMultipart('alternative')
+        msg['From'] = smtp_user
+        msg['To'] = to
+        msg['Subject'] = subject
+
+        msg.attach(MIMEText(text_body, 'plain'))
+        msg.attach(MIMEText(html_body, 'html'))
+        print("Email constructed with plain text and HTML parts.")
+
+        # Send the email
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            print("Connecting to SMTP server...")
+            server.starttls()
+            print("Starting TLS encryption...")
+            server.login(smtp_user, smtp_password)
+            print("Logged in to SMTP server.")
+            server.send_message(msg)
+            print(f"Email sent successfully to {to}")
+
+        return True
+
+    except Exception as e:
+        print("An error occurred during the email sending process.")
+        print(f"Error: {e}")
+        return False
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == '__main__':
     app.run(debug=True)
+
+
