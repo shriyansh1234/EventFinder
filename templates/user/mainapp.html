@@ -5,20 +5,24 @@
 {% block content %}
 <style>
     .list-group-item a {
-        color: inherit;  /* Inherit color from parent element */
-        text-decoration: none; /* Remove underline */
+        color: inherit;
+        /* Inherit color from parent element */
+        text-decoration: none;
+        /* Remove underline */
     }
 
     .list-group-item a:hover {
-        text-decoration: none; /* Remove underline on hover */
-        color: inherit; /* Keep the same color on hover */
+        text-decoration: none;
+        /* Remove underline on hover */
+        color: inherit;
+        /* Keep the same color on hover */
     }
 </style>
 
 <div class="container">
     <h1>Welcome to the Event Finder App!</h1>
     <p>Here are some events happening around Atlanta, GA:</p>
-    
+
     <!-- Filter Button -->
     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#filterModal">
         Open Filters
@@ -97,67 +101,69 @@
             </div>
         </div>
     </div>
-    
+
 
     <div class="list-group">
         {% for event in events %}
-            <div class="list-group-item">
-                <a href="{{ url_for('event_details', event_id=event.event_id) }}">
-                    <div>  
-                        <img src="{{ url_for('static', filename='images/' + event.image_url) }}" class="img-fluid" alt="{{ event.name }}" style="border-radius: 8px; max-width: 20vh; max-height: 15vh;"> 
-                        <h5 class="mt-3" style="font-size: 1.8rem;">{{ event.event_name }}</h5>
-                        <div class="row">
-                            <div class="col-md-8">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <p class="card-text"><strong>Location:</strong> {{ event.location }}</p>
-                                        <p class="card-text"><strong>Category:</strong> {{ event.category_name }}</p>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <p class="card-text"><strong>Date:</strong> {{ event.date}}</p>
-                                        <p class="card-text"><strong>Time:</strong> {{ event.event_time }}</p>
-                                        <p class="card-text"><strong>Capacity:</strong> {{ event.capacity }}</p>
-                                    </div>
+        <div class="list-group-item">
+            <a href="{{ url_for('event_details', event_id=event.event_id) }}">
+                <div>
+                    <img src="{{ url_for('static', filename='images/' + event.image_url) }}" class="img-fluid"
+                        alt="{{ event.name }}" style="border-radius: 8px; max-width: 20vh; max-height: 15vh;">
+                    <h5 class="mt-3" style="font-size: 1.8rem;">{{ event.event_name }}</h5>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="card-text"><strong>Location:</strong> {{ event.location }}</p>
+                                    <p class="card-text"><strong>Category:</strong> {{ event.category_name }}</p>
                                 </div>
-                            </div>
-                            <div class="col-md-4 text-end">
-                                <div class="border p-3" style="font-size: 1.5rem; background-color: #f8f9fa;">
-                                    <strong>
-                                        {% if event.paid %}
-                                            ${{ event.ticket_price }}
-                                        {% else %}
-                                            Free
-                                        {% endif %}
-                                    </strong>
+                                <div class="col-md-6">
+                                    <p class="card-text"><strong>Date:</strong> {{ event.date}}</p>
+                                    <p class="card-text"><strong>Time:</strong> {{ event.event_start }}</p>
+                                    <p class="card-text"><strong>Capacity:</strong> {{ event.capacity }}</p>
                                 </div>
                             </div>
                         </div>
-                        <!-- Add to List Button -->
-                        <button class="btn btn-link" onclick="toggleStar(this)">
-                            <i class="far fa-star" style="font-size: 1.5rem;"></i> Add to List
-                        </button>
-                    </div> 
-                </a>
-            </div>
+                        <div class="col-md-4 text-end">
+                            <div class="border p-3" style="font-size: 1.5rem; background-color: #f8f9fa;">
+                                <strong>
+                                    {% if event.paid == 'paid' %}
+                                    ${{ event.ticket_price }}
+                                    {% else %}
+                                    Free
+                                    {% endif %}
+
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Add to List Button -->
+                    <button class="btn btn-link" onclick="toggleStar(this)">
+                        <i class="far fa-star" style="font-size: 1.5rem;"></i> Add to List
+                    </button>
+                </div>
+            </a>
+        </div>
         {% endfor %}
     </div>
 
     <!-- Flash Message Script -->
     {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            <script>
-                // Trigger the modal when the page loads
-                document.addEventListener('DOMContentLoaded', function() {
-                    // Get the flashed message
-                    var message = "{{ messages[0] }}";  // Get the first flashed message (if any)
-                    document.getElementById('modalMessage').textContent = message;
+    {% if messages %}
+    <script>
+        // Trigger the modal when the page loads
+        document.addEventListener('DOMContentLoaded', function () {
+            // Get the flashed message
+            var message = "{{ messages[0] }}";  // Get the first flashed message (if any)
+            document.getElementById('modalMessage').textContent = message;
 
-                    // Show the modal
-                    let modal = new bootstrap.Modal(document.getElementById('feedbackModal'));
-                    modal.show();
-                });
-            </script>
-        {% endif %}
+            // Show the modal
+            let modal = new bootstrap.Modal(document.getElementById('feedbackModal'));
+            modal.show();
+        });
+    </script>
+    {% endif %}
     {% endwith %}
 
 </div>
@@ -200,16 +206,16 @@
     }
 
     function resetFilters() {
-    // Clear all inputs in the filter form
-    document.getElementById('distance').value = '';
-    document.getElementById('cost').value = '';
-    document.getElementById('eventType').value = '';
-    document.getElementById('category').value = '';
-    document.getElementById('sort').value = 'ascending'; // Reset to default sort option
+        // Clear all inputs in the filter form
+        document.getElementById('distance').value = '';
+        document.getElementById('cost').value = '';
+        document.getElementById('eventType').value = '';
+        document.getElementById('category').value = '';
+        document.getElementById('sort').value = 'ascending'; // Reset to default sort option
 
-    // Optionally, if you want to immediately apply the reset to show all events:
-    applyFilters();
-}
+        // Optionally, if you want to immediately apply the reset to show all events:
+        applyFilters();
+    }
 </script>
 
 {% endblock %}

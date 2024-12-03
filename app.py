@@ -244,7 +244,7 @@ def main_app():
 def pull_data():
     user_id = session.get('user_id')
     query = """
-        SELECT e.event_id, e.organizer_id, e.event_name, e.description, c.category_name, e.location, e.date, e.capacity, e.ticket_price, e.tickets_booked, e.created_at, e.image_url, e.paid
+        SELECT e.event_id, e.organizer_id, e.event_name, e.description, c.category_name, e.location, e.date, e.capacity, e.ticket_price, e.tickets_booked, e.created_at, e.image_url, e.paid, e.event_start
         FROM Events e
         JOIN Categories c ON e.category_id = c.category_id
         LEFT JOIN Interests i ON e.category_id = i.category_id AND i.user_id = ?
@@ -383,7 +383,7 @@ def filter_events():
 
     # Base SQL query
     query = """
-        SELECT e.event_id, e.event_name, e.description, c.category_name, e.location, e.date, e.capacity, e.ticket_price, e.tickets_booked, e.image_url, e.paid
+        SELECT e.event_id, e.event_name, e.description, c.category_name, e.location, e.date, e.capacity, e.ticket_price, e.tickets_booked, e.image_url, e.paid, e.event_start
         FROM Events e
         JOIN Categories c ON e.category_id = c.category_id
         WHERE 1 = 1
