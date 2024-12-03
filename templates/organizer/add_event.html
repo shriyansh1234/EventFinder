@@ -44,8 +44,9 @@
         
         <div class="mb-3">
             <label for="location" class="form-label">Location:</label>
-            <input type="text" id="location" placeholder="Enter Location" name="location" class="form-control" required>
+            <input type="text" id="autocomplete" placeholder="Enter Location" name="location" class="form-control" required>
         </div>
+      
 
         <div class="mb-3">
             <label for="date" class="form-label">Date:</label>
@@ -87,6 +88,54 @@
         
         <button type="submit" class="btn btn-primary">Add Event</button>
     </form>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAFPTYH6osKBaIHhhW3laB5Fb0y6zF9pq8&libraries=places"></script>
+    <script>
+        let autocomplete;
+    
+        function initAutocomplete() {
+            console.log("Initializing Google Places Autocomplete...");
+    
+            // Target the input field with the ID 'autocomplete'
+            const input = document.getElementById('autocomplete');
+            if (!input) {
+                console.error("Autocomplete input field not found.");
+                return;
+            }
+    
+            console.log("Autocomplete input field found:", input);
+    
+            // Initialize Google Places Autocomplete
+            autocomplete = new google.maps.places.Autocomplete(input, {
+                types: ['geocode'], // Restrict the results to geographical locations
+            });
+    
+            if (autocomplete) {
+                console.log("Google Places Autocomplete initialized successfully.");
+            } else {
+                console.error("Failed to initialize Google Places Autocomplete.");
+            }
+    
+            // Add a listener to handle place selection
+            autocomplete.addListener('place_changed', () => {
+                const place = autocomplete.getPlace();
+                if (place) {
+                    console.log("Place selected:", place);
+                    console.log("Place name:", place.name);
+                    console.log("Place address:", place.formatted_address);
+                    console.log("Place details:", place);
+                } else {
+                    console.warn("No place selected.");
+                }
+            });
+        }
+    
+        // Initialize autocomplete on window load
+        window.onload = () => {
+            console.log("Window loaded. Initializing Autocomplete...");
+            initAutocomplete();
+        };
+    </script>
 </div>
 
 <script>
@@ -114,3 +163,5 @@
     }
 </script>
 {% endblock %}
+
+
