@@ -260,7 +260,6 @@ def pull_data():
 
 @app.route('/organizer')
 def organizer():
-    ##messege: request.args.get('message')
     return render_template('/organizer/organizer.html')  # Create this template for the Organizer page
 
 
@@ -321,17 +320,17 @@ def event_details(event_id):
     """
 
     event_details = query_db(query, (event_id,), one=True)
-
+    print(event_details)
     if event_details is not None:
-            # If RSVP is clicked, flash a message and redirect to main app
-            if request.method == 'POST':  # This will trigger if the RSVP button is clicked
-                flash("You have successfully RSVPd for the event!")  
-                return redirect(url_for('main_app'))  
-            
-            return render_template('/user/event_details.html', event=event_details)
+        # Event found, render details template
+        print(event_details)
+        return render_template('/user/event_details.html', event=event_details)
     else:
-            # If event not found, redirect to main app
-            return redirect(url_for('main_app'))
+        # Event not found, handle error
+        return redirect(url_for('main_app'))  # Or display an error message
+
+
+
 
 """"
 @app.route('/filter', methods=['GET'])
@@ -411,61 +410,6 @@ def filter_events():
         return redirect(url_for('main_app'))
     
 
-@app.route('/rsvp', methods=['POST'])
-def book_event():
-    userid = session.get('user_id')
-    event = request.form.get('event_id')
-    total = request.form.get('total_price')
-    tickets = request.form.get('amount')
-    booked = datetime.now()
-
-    if userid is not None:
-        connection = connect_to_aws_rds()
-        if connection is None:
-            return jsonify({"error": "Database connection failed"}), 500
-
-        try:
-            cursor = connection.cursor()
-            query = """INSERT INTO Tickets (event_id, user_id, booking_date, ticket_amount, total_price)
-                       VALUES(?, ?, ?, ?, ?)"""
-            cursor.execute(query, (event, userid, booked, tickets, total))
-            connection.commit()
-
-            # Fetch user and event details to send email
-            user_email = session.get('email')
-            event_details = query_db(
-                "SELECT event_name, date, location, ticket_price FROM Events WHERE event_id = ?", 
-                (event,), one=True
-            )
-
-
-
-            if event_details:
-                send_booking_confirmation_email(
-                    to=user_email,
-                    user_name=session.get('first_name', 'Guest'),
-                    event_name=event_details['event_name'],
-                    event_date=event_details['date'],
-                    event_location=event_details['location'],
-                    event_cost=event_details['ticket_price']
-                )
-
-            return redirect(url_for('confirm'))
-
-        except pyodbc.Error as error:
-            return jsonify({"error": "Database error"}), 500
-
-        finally:
-            cursor.close()
-            connection.close()
-
-    return jsonify({"error": "Not logged in"}), 400
-
-
-
-@app.route('/confirmation')
-def confirm():
-    return render_template('confirmation.html')
 
 
 @app.route('/logout')
@@ -588,6 +532,74 @@ def submitInterests():
     else:
         return jsonify({"error": "Not logged in"}), 400
     #return jsonify(interests)
+
+
+
+@app.route('/rsvp', methods=['POST'])
+def bookEvent():
+    userid = session.get('user_id')
+    event = request.form.get('event_id')
+    total = request.form.get('total_price')
+    tickets = request.form.get('amount')
+    booked = datetime.now()
+    if userid is not None:
+        connection = connect_to_aws_rds()
+        if connection is None:
+            return jsonify({"error": "Database connection failed"}), 500
+
+        try:
+            cursor = connection.cursor()
+            query = """INSERT INTO Tickets (event_id, user_id, booking_date, ticket_amount, total_price)
+                       VALUES(?, ?, ?, ?, ?)"""
+            cursor.execute(query, (event, userid, booked, tickets, total))
+            connection.commit()
+
+            # Fetch user and event details to send email
+            user_email = session.get('email')
+            event_details = query_db(
+                "SELECT event_name, date, location, ticket_price FROM Events WHERE event_id = ?", 
+                (event,), one=True
+            )
+
+
+
+            if event_details:
+                send_booking_confirmation_email(
+                    to=user_email,
+                    user_name=session.get('first_name', 'Guest'),
+                    event_name=event_details['event_name'],
+                    event_date=event_details['date'],
+                    event_location=event_details['location'],
+                    event_cost=event_details['ticket_price']
+                )
+
+            return redirect(url_for('confirm'))
+
+        except pyodbc.Error as error:
+            return jsonify({"error": "Database error"}), 500
+
+        finally:
+            cursor.close()
+            connection.close()
+
+    return jsonify({"error": "Not logged in"}), 400
+
+
+@app.route('/confirmation')
+def confirm():
+    return render_template('confirmation.html')
+
+@app.route('/bookings')
+def getEvents():
+    userid = session.get('user_id')
+    query = """
+            SELECT e.event_id, e.event_name, e.location, e.date, e.event_start, e.image_url, t.ticket_amount, t.total_price
+            FROM Tickets t
+            JOIN Events e ON t.event_id = e.event_id
+            WHERE t.user_id = ?"""
+    booked = query_db(query, userid)
+    print(booked)
+    return render_template('/user/bookings.html', booked=booked)
 
 def send_booking_confirmation_email(to, user_name, event_name, event_date, event_location, event_cost):
     try:
