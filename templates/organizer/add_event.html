@@ -20,14 +20,17 @@
             <label for="category_id" class="form-label">Category:</label>
             <select id="category_id" name="category_id" class="form-control" required>
                 <option value="" disabled selected>Select Category</option> <!-- Default unselectable option -->
-                <option value="11">Art</option>
-                <option value="7">Cars</option>
-                <option value="4">Food</option>
-                <option value="2">Tech</option>
+                <option value="1">Electronics</option>
+                <option value="2">Books</option>
+                <option value="3">Clothing</option>
+                <option value="4">Home and Kitchen</option>
+                <option value="5">Sports</option>
+                <option value="6">Toys</option>
+                <option value="7">Health & Beauty</option>
+                <option value="8">Automotive</option>
+                <option value="9">Fantasy</option>
                 <option value="10">Music</option>
-                <option value="6">Fitness</option>
-                <option value="8">Educational</option>
-                <option value="5">Miscellaneous</option>
+                <option value="11">Art</option>
             </select>
         </div>
         
@@ -42,8 +45,13 @@
         </div>
         
         <div class="mb-3">
-            <label for="time" class="form-label">Time:</label>
-            <input type="time" id="time" name="event_time" class="form-control" required>
+            <label for="time" class="form-label">Start Time:</label>
+            <input type="time" id="time" name="event_start" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="time" class="form-label">End Time:</label>
+            <input type="time" id="time" name="event_end" class="form-control" required>
         </div>
         
         <div class="mb-3">
