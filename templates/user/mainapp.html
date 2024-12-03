@@ -97,7 +97,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <p class="card-text"><strong>Date:</strong> {{ event.date}}</p>
-                                        <p class="card-text"><strong>Time:</strong> {{ event.event_time }}</p>
+                                        <p class="card-text"><strong>Time:</strong> {{ event.event_start }}</p>
                                         <p class="card-text"><strong>Capacity:</strong> {{ event.capacity }}</p>
                                     </div>
                                 </div>
@@ -105,8 +105,8 @@
                             <div class="col-md-4 text-end">
                                 <div class="border p-3" style="font-size: 1.5rem; background-color: #f8f9fa;">
                                     <strong>
-                                        {% if event.paid %}
-                                            ${{ event.cost }}
+                                        {% if event.ticket_price > 0 %}
+                                            ${{ event.ticket_price }}
                                         {% else %}
                                             Free
                                         {% endif %}

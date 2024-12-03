@@ -196,7 +196,7 @@ def signin():
         print(userinfo)
         if userinfo['user_exists']:
             session['user_id'] = userinfo['user']['user_id']  # Keeps track of user logged in
-            
+            session['first_name'] = userinfo['user']['first_name']
             # Check if the user is an organizer and fetch additional details from the Organizer table
             user_id = userinfo['user']['user_id']
             organizer_info = get_organizer_info(user_id)
@@ -238,7 +238,7 @@ def main_app():
 def pull_data():
     user_id = session.get('user_id')
     query = """
-        SELECT e.event_id, e.organizer_id, e.event_name, e.description, c.category_name, e.location, e.date, e.event_time, e.capacity, e.ticket_price, e.tickets_booked, e.created_at,e.image_url
+        SELECT e.event_id, e.organizer_id, e.event_name, e.description, c.category_name, e.location, e.date, e.event_start, e.event_end, e.capacity, e.ticket_price, e.tickets_booked, e.created_at,e.image_url
         FROM Events e
         JOIN Categories c ON e.category_id = c.category_id
         LEFT JOIN Interests i ON e.category_id = i.category_id AND i.user_id = ?
@@ -267,7 +267,7 @@ def add_event():
         category_id = request.form['category_id']
         location = request.form['location']
         date = request.form['date']
-        event_time = request.form['event_time']
+        event_time = request.form['event_start']
         capacity = int(request.form['capacity'])
         ticket_price = float(request.form['ticket_price']) if request.form.get('paid') == 'paid' else 0.0
         image_url = ""  # Placeholder for image URL if uploaded
@@ -282,7 +282,7 @@ def add_event():
         
         # SQL query to insert the event
         query = """
-            INSERT INTO Events (event_name, description, category_id, location, date, event_time, capacity, ticket_price, image_url, created_at)
+            INSERT INTO Events (event_name, description, category_id, location, date, event_start, capacity, ticket_price, image_url, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         """
         
@@ -308,7 +308,7 @@ def add_event():
 @app.route('/event/<int:event_id>')
 def event_details(event_id):
     query = """
-        SELECT e.event_id, e.event_name, e.description, c.category_name, e.location, e.date, e.event_time, e.capacity, e.ticket_price, e.tickets_booked, e.image_url
+        SELECT e.event_id, e.event_name, e.description, c.category_name, e.location, e.date, e.event_start, e.capacity, e.ticket_price, e.tickets_booked, e.image_url
         FROM Events e
         JOIN Categories c ON e.category_id = c.category_id
         WHERE e.event_id = ?
@@ -320,6 +320,7 @@ def event_details(event_id):
     print("ARE YOU SUREEEEEEEEEEEEEEEEEEEEEEEEEE")
     if event_details is not None:
         # Event found, render details template
+        print(event_details)
         return render_template('/user/event_details.html', event=event_details)
     else:
         # Event not found, handle error
@@ -368,7 +369,7 @@ def filter_events():
     # Base SQL query
     query = """
         SELECT e.event_id, e.event_name, e.description, c.category_name, e.location, e.date, 
-               e.event_time, e.capacity, e.ticket_price, e.tickets_booked, e.image_url
+               e.event_start, e.capacity, e.ticket_price, e.tickets_booked, e.image_url
         FROM Events e
         JOIN Categories c ON e.category_id = c.category_id
         WHERE 1 = 1
@@ -527,6 +528,58 @@ def submitInterests():
     else:
         return jsonify({"error": "Not logged in"}), 400
     #return jsonify(interests)
+
+
+@app.route('/rsvp', methods=['POST'])
+def bookEvent():
+    userid = session.get('user_id')
+    event = request.form.get('event_id')
+    total = request.form.get('total_price')
+    tickets = request.form.get('amount')
+    booked = datetime.now()
+    if userid is not None:
+            connection = connect_to_aws_rds()  # Assumes connect_to_aws_rds() sets up your database connection
+            if connection is None:
+                print("Connection to the database failed.")
+                return jsonify({"error": "Database connection failed"}), 500
+            
+            try:
+                cursor = connection.cursor()
+                query = """INSERT INTO Tickets (event_id, user_id, booking_date, ticket_amount, total_price)
+                        VALUES(?, ?, ?, ?, ?)"""
+                cursor.execute(query, (event, userid, booked, tickets, total))
+                connection.commit()  # Commit the transaction
+                
+                print(f"User ID {userid} successfully RSVPed for event: {event}")
+                return redirect(url_for('confirm')) 
+                
+            except pyodbc.Error as error:
+                print(f"Database error: {error}")
+                return jsonify({"error": "Database update failed"}), 500
+            
+            finally:
+                cursor.close()
+                connection.close()
+        
+    else:
+        return jsonify({"error": "Not logged in"}), 400    
+
+
+@app.route('/confirmation')
+def confirm():
+    return render_template('confirmation.html')
+
+@app.route('/bookings')
+def getEvents():
+    userid = session.get('user_id')
+    query = """
+            SELECT e.event_id, e.event_name, e.location, e.date, e.event_start, e.image_url, t.ticket_amount, t.total_price
+            FROM Tickets t
+            JOIN Events e ON t.event_id = e.event_id
+            WHERE t.user_id = ?"""
+    booked = query_db(query, userid)
+    print(booked)
+    return render_template('/user/bookings.html', booked=booked)
 
 if __name__ == '__main__':
     app.run(debug=True)

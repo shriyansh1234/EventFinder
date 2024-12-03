@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Main App - Event Finder{% endblock %}
+
+{% block content %}
+
+{%for event in booked%}
+
+<div class="list-group-item">
+        <div>  
+            <img src="{{ url_for('static', filename='images/' + event.image_url) }}" class="img-fluid" alt="{{ event.name }}" style="border-radius: 8px; max-width: 20vh; max-height: 15vh;"> 
+            <h5 class="mt-3" style="font-size: 1.8rem;">{{ event.event_name }}</h5>
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="card-text"><strong>Location:</strong> {{ event.location }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="card-text"><strong>Date:</strong> {{ event.date}}</p>
+                            <p class="card-text"><strong>Time:</strong> {{ event.event_start }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="border p-3" style="font-size: 1.5rem; background-color: #f8f9fa;">
+                        <strong>
+                            {% if event.total_price > 0 %}
+                                ${{ event.total_price }} for {{ event.ticket_amount }} ticket(s)
+                            {% else %}
+                                {{ event.ticket_amount }} ticket(s)
+                            {% endif %}
+                        </strong>
+                    </div>
+                </div>
+            </div>
+        </div> 
+</div>
+{%endfor%}
+
+{% endblock %}
