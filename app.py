@@ -244,7 +244,7 @@ def main_app():
 def pull_data():
     user_id = session.get('user_id')
     query = """
-        SELECT e.event_id, e.organizer_id, e.event_name, e.description, c.category_name, e.location, e.date, e.capacity, e.ticket_price, e.tickets_booked, e.created_at,e.image_url
+        SELECT e.event_id, e.organizer_id, e.event_name, e.description, c.category_name, e.location, e.date, e.capacity, e.ticket_price, e.tickets_booked, e.created_at, e.image_url, e.paid
         FROM Events e
         JOIN Categories c ON e.category_id = c.category_id
         LEFT JOIN Interests i ON e.category_id = i.category_id AND i.user_id = ?
@@ -275,8 +275,10 @@ def add_event():
         event_start = request.form['event_start']
         event_end = request.form['event_end']
         capacity = int(request.form['capacity'])
-        ticket_price = float(request.form['ticket_price']) if request.form.get('paid') == 'paid' else 0.0
+        paid = request.form['paid']  # Get the 'paid' value (free or paid)
+        ticket_price = float(request.form['ticket_price']) if paid == 'paid' else 0.0
         image_url = ""  # Placeholder for image URL if uploaded
+
         # Handle image upload
         if 'image_url' in request.files:
             image = request.files['image_url']
@@ -284,26 +286,36 @@ def add_event():
                 image_filename = image.filename
                 image.save(os.path.join(app.config['UPLOAD_FOLDER'], image_filename))
                 image_url = image_filename
+
         user_id = session.get('user_id')
-        organizer_query = " SELECT organizer_id FROM Organizer WHERE user_id = ? "
-        organizer = query_db(organizer_query,(user_id,),one = True)
+        organizer_query = "SELECT organizer_id FROM Organizer WHERE user_id = ?"
+        organizer = query_db(organizer_query, (user_id,), one=True)
         organizer_id = organizer['organizer_id']
-        params = (organizer_id,event_name, description, category_id, location, date, event_start,event_end, capacity, ticket_price, image_url)
+
+        # Update parameters to include 'paid'
+        params = (
+            organizer_id, event_name, description, category_id, location,
+            date, event_start, event_end, capacity, paid, ticket_price, image_url
+        )
+
         query = """
-            INSERT INTO Events (organizer_id,event_name, description, category_id, location, date, event_start,event_end ,  capacity, ticket_price, image_url, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            INSERT INTO Events (
+                organizer_id, event_name, description, category_id, location,
+                date, event_start, event_end, capacity, paid, ticket_price, image_url, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         """
-    
+
         result = execute_db(query, params)
-        
+
         if result is None:
-            flash("Event added successfully!", "success") 
+            flash("Event added successfully!", "success")
             return redirect(url_for('organizer'))
         else:
-            flash("Failed to add the event. Please try again.", "error")  
+            flash("Failed to add the event. Please try again.", "error")
             return render_template('/organizer/add_event.html')
 
-    return render_template('/organizer/add_event.html') 
+    return render_template('/organizer/add_event.html')
+
 
 
 
@@ -313,7 +325,7 @@ def add_event():
 @app.route('/event/<int:event_id>',methods=['GET','POST'])
 def event_details(event_id):
     query = """
-        SELECT e.event_id, e.event_name, e.description, c.category_name, e.location, e.date, e.event_start, e.capacity, e.ticket_price, e.tickets_booked, e.image_url
+        SELECT e.event_id, e.event_name, e.description, c.category_name, e.location, e.date, e.event_start, e.capacity, e.ticket_price, e.tickets_booked, e.image_url, e.paid
         FROM Events e
         JOIN Categories c ON e.category_id = c.category_id
         WHERE e.event_id = ?
@@ -371,7 +383,7 @@ def filter_events():
 
     # Base SQL query
     query = """
-        SELECT e.event_id, e.event_name, e.description, c.category_name, e.location, e.date, e.capacity, e.ticket_price, e.tickets_booked, e.image_url
+        SELECT e.event_id, e.event_name, e.description, c.category_name, e.location, e.date, e.capacity, e.ticket_price, e.tickets_booked, e.image_url, e.paid
         FROM Events e
         JOIN Categories c ON e.category_id = c.category_id
         WHERE 1 = 1
