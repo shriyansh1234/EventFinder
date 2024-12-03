@@ -257,18 +257,16 @@ def organizer():
 @app.route('/add-event', methods=['GET', 'POST'])
 def add_event():
     if request.method == 'POST':
-        # Gather form data
-        print("am right here")
         event_name = request.form['name']
         description = request.form['description']
         category_id = request.form['category_id']
         location = request.form['location']
         date = request.form['date']
-        event_time = request.form['event_start']
+        event_start = request.form['event_start']
+        event_end = request.form['event_end']
         capacity = int(request.form['capacity'])
         ticket_price = float(request.form['ticket_price']) if request.form.get('paid') == 'paid' else 0.0
         image_url = ""  # Placeholder for image URL if uploaded
-        params = (event_name, description, category_id, location, date, event_time, capacity, ticket_price, image_url)
         # Handle image upload
         if 'image_url' in request.files:
             image = request.files['image_url']
@@ -276,11 +274,14 @@ def add_event():
                 image_filename = image.filename
                 image.save(os.path.join(app.config['UPLOAD_FOLDER'], image_filename))
                 image_url = image_filename
-        
-
+        user_id = session.get('user_id')
+        organizer_query = " SELECT organizer_id FROM Organizer WHERE user_id = ? "
+        organizer = query_db(organizer_query,(user_id,),one = True)
+        organizer_id = organizer['organizer_id']
+        params = (organizer_id,event_name, description, category_id, location, date, event_start,event_end, capacity, ticket_price, image_url)
         query = """
-            INSERT INTO Events (event_name, description, category_id, location, date, event_start, capacity, ticket_price, image_url, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            INSERT INTO Events (organizer_id,event_name, description, category_id, location, date, event_start,event_end ,  capacity, ticket_price, image_url, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         """
     
         result = execute_db(query, params)
