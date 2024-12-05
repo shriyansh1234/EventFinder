@@ -518,6 +518,18 @@ def submitname():
                 else:
                     print(f"User ID {userid} already exists in the Organizer table.")
             
+            print(userid)
+        
+            organizer_info = get_organizer_info(userid)
+            print("Hello", organizer_info)
+            if organizer_info:
+                session['is_organizer'] = True
+                session['company_name'] = organizer_info['company_name']
+                session['address'] = organizer_info['address']
+                session['phone'] = organizer_info['phone']
+            else:
+                session['is_organizer'] = False
+
             return redirect(url_for('interests'))
 
         except pyodbc.Error as error:
