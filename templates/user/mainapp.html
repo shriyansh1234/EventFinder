@@ -76,11 +76,19 @@
                             <label for="category" class="form-label">Category</label>
                             <select class="form-select" id="category">
                                 <option value="">Select Category</option>
+                                <option value="electronics">Electronics</option>
+                                <option value="books">Books</option>
+                                <option value="clothing">Clothing</option>
+                                <option value="home-kitchen">Home & Kitchen</option>
+                                <option value="sports">Sports</option>
+                                <option value="toys">Toys</option>
+                                <option value="health-beauty">Health & Beauty</option>
+                                <option value="automotive">Automotive</option>
+                                <option value="fantasy">Fantasy</option>
                                 <option value="music">Music</option>
-                                <option value="food">Food</option>
                                 <option value="art">Art</option>
-                                <!-- Add more categories as needed -->
                             </select>
+                            
                         </div>
                         <div class="mb-3">
                             <label for="sort" class="form-label">Sort By</label>
@@ -105,48 +113,56 @@
 
     <div class="list-group">
         {% for event in events %}
-        <div class="list-group-item">
-            <a href="{{ url_for('event_details', event_id=event.event_id) }}">
-                <div>
-                    <img src="{{ url_for('static', filename='images/' + event.image_url) }}" class="img-fluid"
-                        alt="{{ event.name }}" style="border-radius: 8px; max-width: 20vh; max-height: 15vh;">
-                    <h5 class="mt-3" style="font-size: 1.8rem;">{{ event.event_name }}</h5>
-                    <div class="row">
-                        <div class="col-md-8">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p class="card-text"><strong>Location:</strong> {{ event.location }}</p>
-                                    <p class="card-text"><strong>Category:</strong> {{ event.category_name }}</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <p class="card-text"><strong>Date:</strong> {{ event.date}}</p>
-                                    <p class="card-text"><strong>Time:</strong> {{ event.event_start }}</p>
-                                    <p class="card-text"><strong>Capacity:</strong> {{ event.capacity }}</p>
-                                </div>
+        <div class="list-group-item mb-4 shadow-sm rounded">
+            <a href="{{ url_for('event_details', event_id=event.event_id) }}" class="text-decoration-none text-dark">
+                <div class="d-flex align-items-center">
+                    <!-- Event Image -->
+                    <div class="me-4">
+                        <img src="{{ url_for('static', filename='images/' + event.image_url) }}" class="img-fluid rounded-3"
+                             alt="{{ event.event_name }}"
+                             style="min-width: 200px; max-width: 200px; min-height: 150px; max-height: 150px; object-fit: cover;">
+                    </div>
+                    
+    
+                    <!-- Event Details -->
+                    <div class="w-100">
+                        <h5 class="mt-3" style="font-size: 1.8rem; font-weight: bold;">{{ event.event_name }}</h5>
+                        <div class="row mb-2">
+                            <div class="col-md-6">
+                                <p class="card-text"><strong>Location:</strong> {{ event.location }}</p>
+                                <p class="card-text"><strong>Category:</strong> {{ event.category_name }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="card-text"><strong>Date:</strong> {{ event.date }}</p>
+                                <p class="card-text"><strong>Time:</strong> {{ event.event_start }}</p>
+                                <p class="card-text"><strong>Capacity:</strong> {{ event.capacity }}</p>
                             </div>
                         </div>
-                        <div class="col-md-4 text-end">
-                            <div class="border p-3" style="font-size: 1.5rem; background-color: #f8f9fa;">
+    
+                        <!-- Price or Free Text -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="border p-3" style="font-size: 1.5rem; background-color: #f8f9fa; width: 50%;">
                                 <strong>
                                     {% if event.paid == 'paid' %}
-                                    ${{ event.ticket_price }}
+                                        ${{ event.ticket_price }}
                                     {% else %}
-                                    Free
+                                        Free
                                     {% endif %}
-
                                 </strong>
                             </div>
+    
+                            <!-- Add to List Button -->
+                            <button class="btn btn-link text-primary" onclick="toggleStar(this)" style="font-size: 1rem;">
+                                <i class="far fa-star"></i> Add to List
+                            </button>
                         </div>
                     </div>
-                    <!-- Add to List Button -->
-                    <button class="btn btn-link" onclick="toggleStar(this)">
-                        <i class="far fa-star" style="font-size: 1.5rem;"></i> Add to List
-                    </button>
                 </div>
             </a>
         </div>
         {% endfor %}
     </div>
+    
 
     <!-- Flash Message Script -->
     {% with messages = get_flashed_messages() %}

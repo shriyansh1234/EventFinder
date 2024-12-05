@@ -203,6 +203,7 @@ def signin():
         if userinfo['user_exists']:
             session['user_id'] = userinfo['user']['user_id']  # Keeps track of user logged in
             session['email'] = userinfo['user']['email']
+            session['first_name'] = userinfo['user']['first_name']
             # Check if the user is an organizer and fetch additional details from the Organizer table
             user_id = userinfo['user']['user_id']
             organizer_info = get_organizer_info(user_id)
@@ -235,7 +236,23 @@ def user_and_password(email, password):
     return {'user_exists': user is not None, 'user': user}
 
 
+@app.route('/my_event')
+def getEventsOrganizer():
+    user_id = session.get('user_id')
+    organizer_query = "SELECT organizer_id FROM Organizer WHERE user_id = ?"
+    organizer = query_db(organizer_query, (user_id,), one=True)
+    organizer_id = organizer['organizer_id']
+    print(f"Organizer ID: {organizer_id}")
 
+    query = """
+            SELECT e.event_id, e.event_name, e.description, e.category_id, e.location, e.date, e.event_start,
+       e.event_end, e.capacity, e.ticket_price, e.image_url, e.tickets_booked, e.created_at
+FROM Events e
+WHERE e.organizer_id = ?"""
+    myEvent = query_db(query, organizer_id)
+    print(myEvent)
+
+    return render_template('organizer/my_event.html', myEvent=myEvent)
 
 @app.route('/app')
 def main_app():
@@ -380,8 +397,19 @@ def filter_events():
     category = request.args.get('category')
     start_date = request.args.get('startDate')
     end_date = request.args.get('endDate')
-
+    print(category)
     # Base SQL query
+
+    category_mapping = {
+        'home-kitchen': 'Home & Kitchen',
+        'health-beauty': 'Health & Beauty'
+    }
+
+    # If the category filter matches the key in the mapping, update it to the display name
+    if category in category_mapping:
+        category = category_mapping[category]
+
+
     query = """
         SELECT e.event_id, e.event_name, e.description, c.category_name, e.location, e.date, e.capacity, e.ticket_price, e.tickets_booked, e.image_url, e.paid, e.event_start
         FROM Events e

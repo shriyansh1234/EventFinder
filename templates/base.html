@@ -10,12 +10,16 @@
     <title>{% block title %}Event Finder{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
     <style>
-        body {
-            background-color: #f8f9fa;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
+body {
+    background: linear-gradient(rgba(173, 216, 230, 0.4), rgba(173, 216, 230, 0.4)), url('https://your-image-url.com/your-image.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
 
         .navbar {
             background-color: #343a40;
@@ -102,9 +106,12 @@
                         <img src="{{ url_for('static', filename='images/user_picture.png') }}" alt="User" class="rounded-circle" style="width: 20px; height: 20px; margin-right: 5px;">
                         <span class="navbar-text me-3">Welcome, {{ session['first_name'] }}</span>  <!-- Display the username here -->
                     </li>
+                    {% if session.get('is_organizer') %}
+                    <!-- Display Organizer link if the user is an organizer -->
                     <li class="nav-item">
                         <a class="nav-link" href="/organizer">Organizer</a>
                     </li>
+                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="/bookings">Bookings</a>
                     </li>
@@ -134,12 +141,29 @@
     </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function goBack() {
-            window.history.back(); // Go back to the previous page
+<script>
+    function goBack() {
+        // Check if the current page is mainapp.html and do not show the back button
+        const currentPage = window.location.href;
+
+        console.log(currentPage)
+        // Check if the current page ends with "mainapp.html" or any other app-related page
+        if (currentPage.endsWith("app")) {
+            // If on mainapp.html, do nothing or disable the back button
+            return;
         }
 
-    </script>
+        // Check if the current page is confirmation.html
+        if (currentPage.includes("confirmation.html")) {
+        
+            window.location.href = "app"; 
+        } else {
+            // Otherwise, go back to the previous page in history
+            window.history.back();  
+        }
+    }
+</script>
+
 </body>
 
 </html>
